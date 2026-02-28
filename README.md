@@ -262,4 +262,3 @@ The system demonstrates a full machine learning pipeline from motion capture to 
 
 ---
 
-Say **next** when you want the README for the next repository (I recommend `orga` next).
