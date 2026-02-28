@@ -1,93 +1,265 @@
-# final-submission
+## Final Submission – Machine Learning Project (WS25)
 
+---
 
+## 📌 Project Overview
 
-## Getting started
+This repository contains the final submission of our Machine Learning project.
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+The objective of this project is to develop a **gesture classification system implemented in Python** that enables users to control a slideshow using body gestures detected from live camera input.
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+The system:
 
-## Add your files
+* Extracts body keypoints using **MediaPipe**
+* Stores motion data in CSV format
+* Trains a neural network implemented from scratch using **NumPy**
+* Detects gestures in real time
+* Integrates predictions into a **Reveal.js** slideshow
+* Provides an evaluation mode for performance scoring
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+The implementation follows the official project requirements .
 
+---
+
+# 🧠 Implemented Requirements
+
+## ✅ Mandatory Requirements
+
+| ID | Description                                                             |
+| -- | ----------------------------------------------------------------------- |
+| M1 | Neural network implemented with Python and NumPy                        |
+| M2 | Detection of mandatory gestures (Swipe Right, Swipe Left, Rotation)     |
+| M3 | Reveal.js slideshow control via gesture prediction                      |
+| M4 | Deployable using pip / pipenv                                           |
+| M5 | Teaser video (H264, mp4 format)                                         |
+| M6 | Performance evaluation mode                                             |
+| M7 | Presentation of data preparation, hyperparameter search, and evaluation |
+
+---
+
+## ⭐ Selected Optional Requirements
+
+The following optional requirements are implemented and integrated:
+
+* O1 – Machine Learning Framework Package
+* O1.1 – Visualization Module
+* O2 – Principal Component Analysis (PCA)
+* O3 – Additional Gesture
+* O5 – Additional Gesture
+* O9 – Attention Detection (Blocking unintended commands)
+* O10 – Game Control via Gestures
+* O12 – Gradient Descent Variations
+
+The selected optionals are documented in the `orga` repository.
+
+---
+
+# 🏗️ System Architecture
+
+```text
+Camera / Video Input
+        ↓
+MediaPipe Pose Extraction
+        ↓
+CSV Motion Data
+        ↓
+Feature Engineering (+ PCA)
+        ↓
+Neural Network (Custom Framework)
+        ↓
+Gesture Prediction
+        ↓
+Reveal.js / Game Control
 ```
-cd existing_repo
-git remote add origin https://gitlab2.informatik.uni-wuerzburg.de/hci/teaching/courses/machine-learning/student-submissions/ws25/Team-31/final-submission.git
-git branch -M main
-git push -uf origin main
+
+---
+
+# 📂 Repository Structure
+
+```bash
+final/
+│
+├── src/
+│   ├── data_processing/
+│   ├── feature_engineering/
+│   ├── model/
+│   ├── prediction/
+│   ├── evaluation/
+│
+├── reveal_slideshow/
+├── demo_data/
+│
+├── run_prediction.py
+├── run_performance_test.py
+│
+├── performance_results.csv
+├── requirements.txt / Pipfile
+└── README.md
 ```
 
-## Integrate with your tools
+---
 
-* [Set up project integrations](https://gitlab2.informatik.uni-wuerzburg.de/hci/teaching/courses/machine-learning/student-submissions/ws25/Team-31/final-submission/-/settings/integrations)
+# 🚀 Setup Instructions (M4)
 
-## Collaborate with your team
+## 1️⃣ Clone Repository
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```bash
+git clone <repository-url>
+cd final
+```
 
-## Test and Deploy
+## 2️⃣ Install Dependencies
 
-Use the built-in continuous integration in GitLab.
+Using pip:
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+```bash
+pip install -r requirements.txt
+```
 
-***
+Or using pipenv:
 
-# Editing this README
+```bash
+pipenv install
+pipenv shell
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+---
 
-## Suggestions for a good README
+# ▶️ Prediction Mode (M3)
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+To start real-time gesture detection and slideshow control:
 
-## Name
-Choose a self-explaining name for your project.
+```bash
+python run_prediction.py
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+This will:
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+* Start camera input
+* Extract pose keypoints
+* Perform gesture classification
+* Send events to the Reveal.js slideshow
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+---
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+# 🧪 Performance Evaluation Mode (M6)
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+To evaluate performance on a given transcript:
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+```bash
+python run_performance_test.py --input <video_transcript.csv>
+```
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+Output:
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+* `performance_results.csv`
+* Console performance score
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+---
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+# 📊 Machine Learning Approach
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+## Feature Engineering
 
-## License
-For open source projects, say how it is licensed.
+* Keypoint normalization
+* Temporal aggregation (sliding windows)
+* Velocity-based features
+* Optional PCA dimensionality reduction
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## Neural Network
+
+* Fully connected feedforward network
+* Custom backpropagation
+* Cross-Entropy with Softmax
+* Implemented without external ML frameworks
+
+## Optimization
+
+* Vanilla Gradient Descent
+* Momentum-based Gradient Descent
+* Nesterov Accelerated Gradient
+
+## Evaluation Metrics
+
+* Accuracy
+* F1 Score
+* Confusion Matrix
+* Learning Curves
+* Performance Score (M6)
+
+---
+
+# 🎮 Supported Gestures
+
+## Mandatory
+
+* Swipe Right
+* Swipe Left
+* Rotation
+
+## Additional
+
+* Rotate (Counter Clockwise)
+* Swipe Up / Swipe Down
+* Attention Detection
+* Game Control Gestures
+
+---
+
+# 🎥 Teaser Video (M5)
+
+The teaser video:
+
+* Duration: 1–2 minutes
+* Format: mp4
+* Codec: H264
+* Includes official HCI intro/outro template
+
+📎 Location: *[Insert link or path]*
+
+---
+
+# 👥 Team Responsibilities
+
+| Team Member | Responsibilities         | Optional Ownership |
+| ----------- | ------------------------ | ------------------ |
+| Name        | Core Model               | O?                 |
+| Name        | Data & Features          | O?                 |
+| Name        | Integration & Evaluation | O?                 |
+
+Each team member can explain all mandatory components.
+Optional requirements are distributed equally across the team.
+
+---
+
+# 🔖 Submission Information
+
+* Git tag used for submission:
+
+```bash
+git tag final
+```
+
+* Submission via GitLab group repository
+* All code required for grading is versioned
+
+---
+
+# 📎 Compliance
+
+* Python ≥ 3.6
+* Only whitelisted libraries used
+* No forbidden ML frameworks (TensorFlow, PyTorch, scikit-learn, etc.)
+* Fully executable on HCI lab workstation
+
+---
+
+# 🏁 Summary
+
+This repository contains the complete, deployable, and evaluable final system fulfilling all mandatory requirements and the selected optional extensions.
+
+The system demonstrates a full machine learning pipeline from motion capture to real-time gesture-based interaction.
+
+---
+
+Say **next** when you want the README for the next repository (I recommend `orga` next).
