@@ -1,32 +1,5 @@
-"""
-live_gesture_recognition.py
-===========================
-Real-time gesture recognition using the trained model.
-
-Captures from a webcam, runs MediaPipe pose detection, feeds a rolling
-frame buffer into the trained neural network, and overlays the detected
-gesture on the live video feed.
-
-Optional: send detected gesture events to the slideshow server.
-
-Usage
------
-    # Basic webcam test (camera 0)
-    python live_gesture_recognition.py
-
-    # Choose camera index
-    python live_gesture_recognition.py --camera 1
-
-    # Mirror / flip the image (useful for laptops)
-    python live_gesture_recognition.py --flip
-
-    # Also control the slideshow (make sure slideshow_server.py is running first)
-    python live_gesture_recognition.py --slideshow
-
-    # All options combined
-    python live_gesture_recognition.py --camera 0 --flip --slideshow
-
-Press  Q  or  ESC  to quit.
+"""Real-time gesture recognition using MediaPipe pose estimation and a trained NumPy neural network.
+Optionally sends gesture events to a slideshow server via HTTP.
 """
 
 import argparse
@@ -42,18 +15,20 @@ import pandas as pd
 import requests
 import yaml
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Paths
-# ─────────────────────────────────────────────────────────────────────────────
+from pipeline.gesture_pipeline import (
+    UPPER_BODY_PARTS, SUFFIXES, LABEL_TO_FULL,
+    extract_features, forward_pass,
+    load_model_artifacts,
+)
+
+# Paths
 SCRIPT_DIR   = pathlib.Path(__file__).resolve().parent
 MODEL_DIR    = SCRIPT_DIR / "data" / "processed"
 KP_YAML      = SCRIPT_DIR / "process_videos" / "keypoint_mapping.yml"
 
 SLIDESHOW_URL = "http://127.0.0.1:8800/event"
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Model / pipeline constants  (must match training / log_emitted_events_to_csv)
-# ─────────────────────────────────────────────────────────────────────────────
+# Pipeline constants (window/smoothing/debounce — tuned for live use)
 WINDOW_SIZE  = 18       # frames per inference window
 HISTORY_LEN  = 9        # majority-vote history length
 MIN_CONF     = 0.82     # minimum softmax confidence to accept non-idle
@@ -61,33 +36,7 @@ MIN_CONSEC   = 10       # debounce: require N consecutive non-idle windows
 BUFFER_SIZE  = WINDOW_SIZE * 3   # rolling frame buffer (ensures correct velocity)
 COOLDOWN_SEC = 2    # seconds to wait before next gesture can fire
 
-UPPER_BODY_PARTS = [
-    "left_shoulder",  "right_shoulder",
-    "left_elbow",     "right_elbow",
-    "left_wrist",     "right_wrist",
-    "left_pinky",     "right_pinky",
-    "left_index",     "right_index",
-    "left_thumb",     "right_thumb",
-    "left_hip",       "right_hip",
-    "nose",
-]
-SUFFIXES = ["_x", "_y", "_z"]
-
-# Map short model labels → ground-truth full names (used for on-screen display)
-LABEL_TO_FULL = {
-    "idle":  "idle",
-    "sl":    "swipe_left",
-    "sr":    "swipe_right",
-    "r_cw":  "rotate_clockwise",
-    "r_ccw": "rotate_anticlockwise",
-    "sd":    "swipe_down",
-    "su":    "swipe_up",
-}
-
-# Map short model labels → slideshow command names (what client.js understands)
-# Navigation: swipe_left = move LEFT through slides (Reveal.left)
-#             swipe_right = move RIGHT through slides (Reveal.right)
-# Image ops:  rotate (CW) / rotate_counter_clock (CCW)
+# Short model label → slideshow command name used by client.js
 LABEL_TO_SLIDESHOW = {
     "idle":  "idle",
     "sl":    "swipe_left",
@@ -120,65 +69,16 @@ DISPLAY_NAMES = {
     "swipe_down":          "↓ Swipe Down",
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Preprocessing (mirrors log_emitted_events_to_csv exactly)
-# ─────────────────────────────────────────────────────────────────────────────
-def normalize_chest_centered(df: pd.DataFrame) -> pd.DataFrame:
-    df = df.copy()
-    cx = (df["left_shoulder_x"] + df["right_shoulder_x"]) / 2
-    cy = (df["left_shoulder_y"] + df["right_shoulder_y"]) / 2
-    cz = (df["left_shoulder_z"] + df["right_shoulder_z"]) / 2
-    sw = np.sqrt(
-        (df["left_shoulder_x"] - df["right_shoulder_x"])**2 +
-        (df["left_shoulder_y"] - df["right_shoulder_y"])**2 +
-        (df["left_shoulder_z"] - df["right_shoulder_z"])**2
-    )
-    sw = sw.replace(0, np.nan)
-    coord_cols = [c for c in df.columns if c.endswith(("_x", "_y", "_z"))]
-    for col in coord_cols:
-        if   col.endswith("_x"): df[col] = (df[col] - cx) / sw
-        elif col.endswith("_y"): df[col] = (df[col] - cy) / sw
-        elif col.endswith("_z"): df[col] = (df[col] - cz) / sw
-    return df
-
-
-def extract_features(df: pd.DataFrame) -> np.ndarray:
-    """Returns shape (N, 90): chest-centred position + velocity."""
-    df = normalize_chest_centered(df).fillna(0.0)
-    feat_cols = [p + s for p in UPPER_BODY_PARTS for s in SUFFIXES if (p + s) in df.columns]
-    pos = df[feat_cols].values.astype(np.float64)
-    vel = np.vstack([np.zeros((1, pos.shape[1])), np.diff(pos, axis=0)])
-    return np.hstack([pos, vel])   # (N, 90)
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  Neural network forward pass (NumPy only)
-# ─────────────────────────────────────────────────────────────────────────────
-def _relu(x):    return np.maximum(0.0, x)
-def _softmax(x):
-    e = np.exp(x - x.max(axis=-1, keepdims=True))
-    return e / e.sum(axis=-1, keepdims=True)
-
-def forward_pass(X, weights, biases):
-    a = np.atleast_2d(X)
-    for W, b in zip(weights[:-1], biases[:-1]):
-        a = _relu(a @ W + b)
-    return _softmax(a @ weights[-1] + biases[-1])
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-#  Build the column name list from keypoint_mapping.yml
-# ─────────────────────────────────────────────────────────────────────────────
+# Column name loader
 def load_column_names(yaml_path: pathlib.Path) -> list:
+    """Read keypoint_mapping.yml and return ordered column name list."""
     with open(yaml_path, "r") as f:
         m = yaml.safe_load(f)
     all_kp = m["face"] + m["body"]
     return [f"{kp}_{d}" for kp in all_kp for d in ("x", "y", "z", "confidence")]
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Live Gesture Recogniser
-# ─────────────────────────────────────────────────────────────────────────────
+# Live gesture recogniser class
 class LiveGestureRecogniser:
     def __init__(self, camera_index: int = 0, flip: bool = False, slideshow: bool = False):
         self.camera_index = camera_index
@@ -207,40 +107,16 @@ class LiveGestureRecogniser:
         if slideshow:
             print(f"  Slideshow URL: {SLIDESHOW_URL}")
 
-    # ── Model loading ─────────────────────────────────────────────────────────
+    # Model loading
     def _load_model(self):
-        for p, name in [(MODEL_DIR / "model_weights.npz", "model_weights"),
-                        (MODEL_DIR / "scaler_params.npz",  "scaler_params"),
-                        (MODEL_DIR / "label_mapping.npz",  "label_mapping")]:
-            if not p.exists():
-                raise FileNotFoundError(
-                    f"Missing: {p}\n"
-                    "Run the training notebook first to generate model artefacts."
-                )
+        self.weights, self.biases, self.mean_, self.std_, self.idx_to_label = \
+            load_model_artifacts(MODEL_DIR)
 
-        data = np.load(MODEL_DIR / "model_weights.npz")
-        n = len([k for k in data.files if k.startswith("W")])
-        self.weights = [data[f"W{i}"] for i in range(n)]
-        self.biases  = [data[f"b{i}"] for i in range(n)]
-
-        scaler = np.load(MODEL_DIR / "scaler_params.npz")
-        self.mean_ = scaler["mean"]
-        self.std_  = scaler["std"].copy()
-        self.std_[self.std_ == 0] = 1.0
-
-        lm = np.load(MODEL_DIR / "label_mapping.npz", allow_pickle=True)
-        self.idx_to_label = {
-            int(i): str(l)
-            for l, i in zip(lm["labels"].tolist(), lm["indices"].tolist())
-        }
-
-    # ── Add one frame to buffer ───────────────────────────────────────────────
+    # Append one MediaPipe frame to the rolling buffer
     def _add_frame(self, landmarks) -> None:
-        """Build one row dict from MediaPipe landmarks and push it to the buffer."""
+        """Build a keypoint row from MediaPipe landmarks and append to the buffer."""
         row = {}
-        # self._col_names pattern: [kp_x, kp_y, kp_z, kp_confidence, ...] for each keypoint
-        # [::4] gives only the _x columns; strip "_x" to get bare joint names in order.
-        joint_names_flat = [c[:-2] for c in self._col_names[::4]]   # strip last 2 chars "_x"
+        joint_names_flat = [c[:-2] for c in self._col_names[::4]]  # _x columns → strip suffix
         for ji, kp_name in enumerate(joint_names_flat):
             lmp = landmarks.landmark[ji]
             row[f"{kp_name}_x"]          = lmp.x
@@ -249,7 +125,7 @@ class LiveGestureRecogniser:
             row[f"{kp_name}_confidence"] = lmp.visibility
         self._buffer.append(row)
 
-    # ── Run one inference step ─────────────────────────────────────────────────
+    # Run inference on the current buffer window
     def _infer(self) -> str:
         if len(self._buffer) < WINDOW_SIZE:
             return "idle"
@@ -257,9 +133,8 @@ class LiveGestureRecogniser:
         # Build DataFrame from buffer, extract features
         df = pd.DataFrame(list(self._buffer))
 
-        features = extract_features(df)        # (BUFFER_SIZE, 90)
-        # Take the LAST WINDOW_SIZE feature rows → correct velocities everywhere
-        window_feat = features[-WINDOW_SIZE:]  # (WINDOW_SIZE, 90)
+        features = extract_features(df)
+        window_feat = features[-WINDOW_SIZE:]  # last WINDOW_SIZE rows
         window_vec  = window_feat.flatten().reshape(1, -1)
 
         # Standardise
@@ -294,7 +169,7 @@ class LiveGestureRecogniser:
 
         return voted
 
-    # ── Send event to slideshow ────────────────────────────────────────────────
+    # Send HTTP event to the slideshow server
     def _send_event(self, gesture: str) -> None:
         try:
             requests.post(SLIDESHOW_URL, json={"command": gesture}, timeout=1.0)
@@ -302,7 +177,7 @@ class LiveGestureRecogniser:
         except Exception as e:
             print(f"[slideshow] Failed to send '{gesture}': {e}")
 
-    # ── Draw HUD overlay on frame ──────────────────────────────────────────────
+    # Draw gesture label and buffer status on the video frame
     def _draw_hud(self, image: np.ndarray, label: str, conf_bar: float) -> np.ndarray:
         h, w = image.shape[:2]
         colour = COLOURS.get(label, (200, 200, 200))
@@ -327,7 +202,7 @@ class LiveGestureRecogniser:
                     cv2.FONT_HERSHEY_PLAIN, 1.0, (150, 150, 150), 1, cv2.LINE_AA)
         return image
 
-    # ── Main loop ─────────────────────────────────────────────────────────────
+    # Main capture-and-infer loop
     def run(self) -> None:
         mp_pose    = mp.solutions.pose
         mp_drawing = mp.solutions.drawing_utils
@@ -411,9 +286,6 @@ class LiveGestureRecogniser:
         print("Stopped.")
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-#  Entry point
-# ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Real-time gesture recognition via webcam"
