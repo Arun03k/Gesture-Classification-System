@@ -1,0 +1,5 @@
+default		00:00:01.550	1.55	00:00:02.660	2.66	00:00:01.110	1.11	rotate_anticlockwise
+default		00:00:05.700	5.7	00:00:06.790	6.79	00:00:01.090	1.09	rotate_anticlockwise
+default		00:00:10.560	10.56	00:00:11.700	11.7	00:00:01.140	1.14	rotate_anticlockwise
+default		00:00:15.230	15.23	00:00:16.340	16.34	00:00:01.110	1.11	rotate_anticlockwise
+default		00:00:20.360	20.36	00:00:21.490	21.49	00:00:01.130	1.13	rotate_anticlockwise

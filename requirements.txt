@@ -1,0 +1,16 @@
+# Machine Learning and Preprocessing
+pandas
+numpy
+matplotlib
+seaborn
+
+# Live Video
+opencv-python
+mediapipe
+sanic
+websockets==13.1
+
+# Utilities
+pyyaml
+tqdm
+jupyter

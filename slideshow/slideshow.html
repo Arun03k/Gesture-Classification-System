@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Gesture-Controlled ML Presentation</title>
+
+  <!-- Reveal.js (CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css">
+
+  <style>
+    .rotatable { transition: transform 0.35s ease; }
+    .gesture-hint { font-size: 0.55em; color: #aaa; margin-top: 1em; }
+  </style>
+
+  <!-- WebSocket helpers — loaded before Reveal so connectWS is available -->
+  <script src="helper_methods.js"></script>
+  <script src="event_listeners.js"></script>
+</head>
+<body>
+  <div class="reveal">
+   <div class="slides">
+
+    <!-- ── Slide 1: Title ──────────────────────────────────────────── -->
+    <section>
+      <h1>Hand Gesture Recognition</h1>
+      <h3>Machine Learning Project — WS 2025</h3>
+      <p>Gesture-controlled presentation using MediaPipe + NumPy Neural Network</p>
+      <p class="gesture-hint">
+        👉 Swipe Left to advance &nbsp;|&nbsp; 👈 Swipe Right to go back<br>
+        👆 Swipe Up / Down for sub-slides &nbsp;|&nbsp; 🔄 Rotate to spin images
+      </p>
+    </section>
+
+    <!-- ── Slide 2: Project Overview ──────────────────────────────── -->
+    <section>
+      <h2>Project Overview</h2>
+      <ul>
+        <li>5 gestures + idle class → 7-class classifier</li>
+        <li>Input: MediaPipe upper-body pose (15 keypoints × 3 axes)</li>
+        <li>Sliding window (18 frames) → 1 620-dim feature vector</li>
+        <li>NumPy-only neural network (no sklearn / TF / PyTorch)</li>
+        <li>3 participants — 70/15/15 train/val/test split</li>
+      </ul>
+    </section>
+
+    <!-- ── Slide 3: Data Pipeline (with sub-slides) ───────────────── -->
+    <section>
+      <section>
+        <h2>Data Pipeline</h2>
+        <p>Three preprocessing steps applied before training</p>
+        <p class="gesture-hint">👇 Swipe Down for details</p>
+      </section>
+      <section>
+        <h3>Step 1 — Chest-Centred Normalisation</h3>
+        <p>Translate all keypoints so <strong>shoulder midpoint = origin</strong>,
+           scale by shoulder width → person-size invariant</p>
+      </section>
+      <section>
+        <h3>Step 2 — Feature Selection</h3>
+        <p>Select 15 upper-body parts (shoulders, elbows, wrists, hands, hips, nose)
+           × 3 axes = <strong>45 position features</strong></p>
+      </section>
+      <section>
+        <h3>Step 3 — Velocity Features</h3>
+        <p>Add frame-to-frame deltas for each position feature
+           → <strong>90 features/frame</strong></p>
+      </section>
+      <section>
+        <h3>Step 4 — Sliding Window</h3>
+        <p>18-frame window (0.6 s), stride 4 → flattened to
+           <strong>1 620-dim</strong> input vector</p>
+      </section>
+    </section>
+
+    <!-- ── Slide 4: Architecture ──────────────────────────────────── -->
+    <section>
+      <h2>Neural Network Architecture</h2>
+      <pre><code class="language-text" style="font-size:0.8em">
+  Input (1620)
+      │
+  Dense(256, ReLU) + Dropout(0.3) + L2(1e-4)
+      │
+  Dense(128, ReLU) + Dropout(0.3) + L2(1e-4)
+      │
+  Dense(7, Softmax)
+
+  Optimiser : Adam  lr=0.001
+  Patience  : 40 epochs   |   LR schedule: ×0.5 / 15 epochs
+  Weight init: × 0.1
+      </code></pre>
+    </section>
+
+    <!-- ── Slide 5: Results ───────────────────────────────────────── -->
+    <section>
+      <h2>Test Results</h2>
+      <table style="font-size:0.75em; width:80%; margin:auto">
+        <tbody>
+          <tr><th>Metric</th><th>Value</th></tr>
+          <tr><td>Test Accuracy</td><td><strong>91.4 %</strong></td></tr>
+          <tr><td>Macro F1-Score</td><td><strong>0.865</strong></td></tr>
+          <tr><td>Test Loss</td><td>0.331</td></tr>
+          <tr><td>Best class (F1)</td><td>idle — 0.947</td></tr>
+          <tr><td>Weakest class</td><td>sd — 0.733</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ── Slide 6: Optionals Implemented ────────────────────────── -->
+    <section>
+      <h2>Optional Requirements</h2>
+      <ul>
+        <li><strong>O1/O1.1</strong> — Feedforward NN + learning curves</li>
+        <li><strong>O2</strong> — PCA dimensionality reduction (NumPy)</li>
+        <li><strong>O3</strong> — Second person generalisation</li>
+        <li><strong>O5</strong> — Live video gesture detection</li>
+        <li><strong>O9</strong> — Gaze angle features</li>
+        <li><strong>O10</strong> — Game control (Connect-4)</li>
+        <li><strong>O12</strong> — GD variants (SGD, Momentum, Adam)</li>
+      </ul>
+    </section>
+
+    <!-- ── Slide 7: Optimizer Comparison ──────────────────────────── -->
+    <section>
+      <h2>Optimizer Comparison (O12)</h2>
+      <table style="font-size:0.8em; width:80%; margin:auto">
+        <tbody>
+          <tr><th>Optimizer</th><th>Test Acc</th><th>Macro F1</th></tr>
+          <tr><td>SGD (lr=0.1)</td><td>89.2 %</td><td>0.849</td></tr>
+          <tr><td>Momentum (lr=0.01, β=0.9)</td><td>90.2 %</td><td>0.850</td></tr>
+          <tr><td><strong>Adam (lr=0.001)</strong></td><td><strong>91.4 %</strong></td><td><strong>0.865</strong></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ── Slide 8: PCA ────────────────────────────────────────────── -->
+    <section>
+      <h2>PCA Dimensionality Reduction (O2)</h2>
+      <table style="font-size:0.8em; width:80%; margin:auto">
+        <tbody>
+          <tr><th>Model</th><th>Features</th><th>Test Acc</th><th>Macro F1</th></tr>
+          <tr><td>Full features</td><td>1 620</td><td><strong>91.4 %</strong></td><td><strong>0.865</strong></td></tr>
+          <tr><td>PCA (k=150, 97% var)</td><td>150</td><td>89.8 %</td><td>0.837</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:0.7em; margin-top:1em">
+        PCA reduces model size by 12× but loses some temporal structure
+      </p>
+    </section>
+
+    <!-- ── Slide 9: Live Demo rotating image ─────────────────────── -->
+    <section>
+      <h2>Live Demo — Gesture Controls</h2>
+      <p>Try: <em>Rotate CW / CCW</em> to spin the image below</p>
+      <div style="font-size: 6em; line-height:1" class="rotatable">🤖</div>
+      <p class="gesture-hint">r_cw = clockwise &nbsp;|&nbsp; r_ccw = counter-clockwise</p>
+    </section>
+
+    <!-- ── Slide 10: Thank You ────────────────────────────────────── -->
+    <section>
+      <h1>Thank You!</h1>
+      <p>Questions?</p>
+      <p class="gesture-hint" style="margin-top:2em">
+        Press <kbd>?</kbd> to see all keyboard shortcuts
+      </p>
+    </section>
+
+   </div><!-- /.slides -->
+  </div><!-- /.reveal -->
+
+  <!-- Reveal.js (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/markdown/markdown.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+
+  <script>
+    Reveal.initialize({
+      hash: true,
+      loop: true,
+      slideNumber: true,
+      plugins: [ RevealMarkdown, RevealHighlight, RevealNotes ]
+    });
+  </script>
+</body>
+</html>

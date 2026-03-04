@@ -1,0 +1,12 @@
+image,title,subtitle
+static/images/1.jpg,Main slide 1,Intro image
+static/images/1.jpg,Detail 1A,Temporary English text for slide 1A
+static/images/1.jpg,Detail 1B,Temporary English text for slide 1B
+static/images/2.jpg,Main slide 2,Another intro image
+static/images/2.jpg,Detail 2A,Temporary English text for slide 2A
+static/images/3.jpg,Simple slide 3,No vertical children here
+static/images/4.jpg,Main slide 4,Stack example
+static/images/4.jpg,Detail 4A,Temporary English text for slide 4A
+static/images/4.jpg,Detail 4B,Temporary English text for slide 4B
+static/images/4.jpg,Detail 4C,Temporary English text for slide 4C
+static/images/5.jpg,Final slide,Just a normal horizontal slide
