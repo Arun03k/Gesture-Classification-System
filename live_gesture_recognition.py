@@ -54,11 +54,12 @@ SLIDESHOW_URL = "http://127.0.0.1:8800/event"
 # ─────────────────────────────────────────────────────────────────────────────
 #  Model / pipeline constants  (must match training / log_emitted_events_to_csv)
 # ─────────────────────────────────────────────────────────────────────────────
-WINDOW_SIZE  = 18       # frames per inference window  (0.6 s @ 30 FPS)
-HISTORY_LEN  = 5        # majority-vote history length
-MIN_CONF     = 0.6      # minimum softmax confidence to accept non-idle
-MIN_CONSEC   = 5        # debounce: require N consecutive non-idle windows
+WINDOW_SIZE  = 18       # frames per inference window
+HISTORY_LEN  = 9        # majority-vote history length
+MIN_CONF     = 0.82     # minimum softmax confidence to accept non-idle
+MIN_CONSEC   = 10       # debounce: require N consecutive non-idle windows
 BUFFER_SIZE  = WINDOW_SIZE * 3   # rolling frame buffer (ensures correct velocity)
+COOLDOWN_SEC = 2    # seconds to wait before next gesture can fire
 
 UPPER_BODY_PARTS = [
     "left_shoulder",  "right_shoulder",
@@ -341,6 +342,7 @@ class LiveGestureRecogniser:
 
         print(f"\nCamera opened. Press Q or ESC to stop.\n")
         last_event_label = "idle"
+        last_event_time  = 0.0
 
         with mp_pose.Pose(min_detection_confidence=0.5,
                           min_tracking_confidence=0.5) as pose:
@@ -376,13 +378,15 @@ class LiveGestureRecogniser:
                     full_label     = LABEL_TO_FULL.get(predicted, predicted)
                     slideshow_cmd  = LABEL_TO_SLIDESHOW.get(predicted, predicted)
 
-                    # Fire event once per gesture (rising edge)
-                    if full_label != "idle" and last_event_label == "idle":
+                    # Fire event once per gesture (rising edge + cooldown guard)
+                    now = time.time()
+                    if full_label != "idle" and last_event_label == "idle" and (now - last_event_time) >= COOLDOWN_SEC:
                         print(f"[GESTURE DETECTED] {full_label}  →  slideshow: {slideshow_cmd}")
                         if self.slideshow:
                             self._send_event(slideshow_cmd)
                         self._display_label = full_label
-                        self._display_until = time.time() + 2.0   # show for 2 s
+                        self._display_until = now + 2.0
+                        last_event_time     = now
                     last_event_label = full_label if full_label != "idle" else "idle"
 
                 else:
