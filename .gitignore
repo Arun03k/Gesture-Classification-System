@@ -64,6 +64,9 @@ desktop.ini
 *.mov
 *.mkv
 
+# PDF files
+*.pdf
+
 # Logs
 *.log
 
