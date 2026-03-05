@@ -4,10 +4,11 @@ Two hidden layers with ReLU, softmax output. No advanced optimizers.
 """
 
 import numpy as np
-from helper_functions import (
-    relu, relu_derivative, softmax,
-    cross_entropy_loss, accuracy, f1_score, plot_metrics,
-)
+from ml_framework.layers.activations import relu, relu_derivative, softmax
+from ml_framework.metrics import accuracy, f1_score
+from ml_framework.visualization.training_plots import plot_metrics
+
+from helper_functions import cross_entropy_loss
 
 
 class BaseNeuralNetwork:

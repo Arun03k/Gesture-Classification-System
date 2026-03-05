@@ -4,6 +4,9 @@ numpy
 matplotlib
 seaborn
 
+# ML Framework (pip-installed from GitLab)
+ml_framework @ git+https://gitlab2.informatik.uni-wuerzburg.de/hci/teaching/courses/machine-learning/student-submissions/ws25/Team-31/ml-package.git
+
 # Live Video
 opencv-python
 mediapipe

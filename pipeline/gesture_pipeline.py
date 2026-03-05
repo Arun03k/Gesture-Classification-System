@@ -4,6 +4,8 @@ import pathlib
 import numpy as np
 import pandas as pd
 
+from ml_framework.layers.activations import relu as _relu, softmax as _softmax
+
 # Constants
 TARGET_FPS = 30        # model was trained at 30 FPS
 
@@ -102,16 +104,7 @@ def subsample_to_fps(df: pd.DataFrame, target_fps: int = TARGET_FPS):
     return df.iloc[orig_idx].reset_index(drop=True), orig_idx
 
 
-# Neural network (NumPy only)
-def _relu(x):
-    return np.maximum(0.0, x)
-
-
-def _softmax(x):
-    e = np.exp(x - x.max(axis=-1, keepdims=True))
-    return e / e.sum(axis=-1, keepdims=True)
-
-
+# Neural network (using ml_framework activations)
 def forward_pass(X, weights, biases):
     """ReLU hidden layers + softmax output."""
     a = np.atleast_2d(X)
