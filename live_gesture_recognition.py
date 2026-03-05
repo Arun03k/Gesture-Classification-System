@@ -17,13 +17,14 @@ import yaml
 
 from pipeline.gesture_pipeline import (
     UPPER_BODY_PARTS, SUFFIXES, LABEL_TO_FULL,
+    MODEL_MANDATORY, MODEL_OPTIONALS, MODEL_GAME, AVAILABLE_MODELS,
     extract_features, forward_pass,
-    load_model_artifacts,
+    load_model_artifacts, get_model_dir,
 )
 
 # Paths
 SCRIPT_DIR   = pathlib.Path(__file__).resolve().parent
-MODEL_DIR    = SCRIPT_DIR / "data" / "processed"
+BASE_MODEL_DIR = SCRIPT_DIR / "data" / "processed"
 KP_YAML      = SCRIPT_DIR / "process_videos" / "keypoint_mapping.yml"
 
 SLIDESHOW_URL = "http://127.0.0.1:8800/event"
@@ -80,10 +81,12 @@ def load_column_names(yaml_path: pathlib.Path) -> list:
 
 # Live gesture recogniser class
 class LiveGestureRecogniser:
-    def __init__(self, camera_index: int = 0, flip: bool = False, slideshow: bool = False):
+    def __init__(self, camera_index: int = 0, flip: bool = False,
+                 slideshow: bool = False, model_name: str = MODEL_MANDATORY):
         self.camera_index = camera_index
         self.flip         = flip
         self.slideshow    = slideshow
+        self.model_name   = model_name
 
         self._load_model()
         self._col_names = load_column_names(KP_YAML)
@@ -102,6 +105,7 @@ class LiveGestureRecogniser:
         self._display_until:  float = 0.0    # timestamp to keep label on screen
 
         print("[LiveGestureRecogniser] Ready.")
+        print(f"  Model  : {model_name}")
         print(f"  Camera : {camera_index}  |  Flip: {flip}  |  Slideshow: {slideshow}")
         print(f"  Classes: {list(self.idx_to_label.values())}")
         if slideshow:
@@ -109,8 +113,9 @@ class LiveGestureRecogniser:
 
     # Model loading
     def _load_model(self):
+        model_dir = get_model_dir(BASE_MODEL_DIR, self.model_name)
         self.weights, self.biases, self.mean_, self.std_, self.idx_to_label = \
-            load_model_artifacts(MODEL_DIR)
+            load_model_artifacts(model_dir)
 
     # Append one MediaPipe frame to the rolling buffer
     def _add_frame(self, landmarks) -> None:
@@ -303,11 +308,18 @@ if __name__ == "__main__":
         help="Send detected gesture events to the slideshow server at "
              f"{SLIDESHOW_URL}"
     )
+    parser.add_argument(
+        "--model", type=str, default=MODEL_MANDATORY,
+        choices=AVAILABLE_MODELS,
+        help=f"Which model to use for inference (default: {MODEL_MANDATORY}). "
+             f"Options: {', '.join(AVAILABLE_MODELS)}"
+    )
     args = parser.parse_args()
 
     recogniser = LiveGestureRecogniser(
         camera_index=args.camera,
         flip=args.flip,
         slideshow=args.slideshow,
+        model_name=args.model,
     )
     recogniser.run()

@@ -7,6 +7,12 @@ import pandas as pd
 # Constants
 TARGET_FPS = 30        # model was trained at 30 FPS
 
+# ── Model name constants ──────────────────────────────────────────
+MODEL_MANDATORY  = "mandatory"     # idle, sl, sr, r_cw  (4 classes)
+MODEL_OPTIONALS  = "optionals"     # idle, sl, sr, r_cw, r_ccw, su, sd (7 classes)
+MODEL_GAME       = "game"          # idle, sl, sr, su, sd (5 classes)
+AVAILABLE_MODELS = [MODEL_MANDATORY, MODEL_OPTIONALS, MODEL_GAME]
+
 UPPER_BODY_PARTS = [
     "left_shoulder",  "right_shoulder",
     "left_elbow",     "right_elbow",
@@ -29,6 +35,19 @@ LABEL_TO_FULL = {
     "sd":    "swipe_down",
     "su":    "swipe_up",
 }
+
+
+def get_model_dir(base_dir: pathlib.Path, model_name: str = MODEL_MANDATORY) -> pathlib.Path:
+    """Return the directory containing model artefacts for the given model name.
+
+    Layout:
+      base_dir/                       ← mandatory (backward compat)
+      base_dir/optionals/             ← optionals (all 7 gestures)
+      base_dir/game/                  ← game (directional gestures)
+    """
+    if model_name == MODEL_MANDATORY:
+        return pathlib.Path(base_dir)          # files live at the base level
+    return pathlib.Path(base_dir) / model_name  # sub-directory
 
 
 # Preprocessing
