@@ -17,3 +17,6 @@ websockets==13.1
 pyyaml
 tqdm
 jupyter
+
+fastapi
+uvicorn
