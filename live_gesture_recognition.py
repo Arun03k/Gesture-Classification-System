@@ -25,7 +25,7 @@ from pipeline.gesture_pipeline import (
 # Paths
 SCRIPT_DIR   = pathlib.Path(__file__).resolve().parent
 BASE_MODEL_DIR = SCRIPT_DIR / "data" / "processed"
-KP_YAML      = SCRIPT_DIR / "process_videos" / "keypoint_mapping.yml"
+KP_YAML      = SCRIPT_DIR / "notebooks" / "process_videos" / "keypoint_mapping.yml"
 
 SLIDESHOW_URL = "http://127.0.0.1:8800/event"
 

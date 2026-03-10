@@ -46,7 +46,7 @@ from pipeline.gesture_pipeline import (
 
 # ── Paths ─────────────────────────────────────────────────────────────────
 BASE_MODEL_DIR = PROJECT_DIR / "data" / "processed"
-KP_YAML        = PROJECT_DIR / "process_videos" / "keypoint_mapping.yml"
+KP_YAML        = PROJECT_DIR / "notebooks" / "process_videos" / "keypoint_mapping.yml"
 
 # ── Gesture pipeline constants (game-tuned) ───────────────────────────────
 WINDOW_SIZE   = 18
