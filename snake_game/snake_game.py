@@ -50,19 +50,29 @@ KP_YAML        = PROJECT_DIR / "notebooks" / "process_videos" / "keypoint_mappin
 
 # ── Gesture pipeline constants (game-tuned) ───────────────────────────────
 WINDOW_SIZE   = 18
-HISTORY_LEN   = 5
-MIN_CONF      = 0.75   # sl / sr
-MIN_CONF_SU   = 0.85   # su — slightly strict to avoid false up during sd prep
-MIN_CONF_SD   = 0.82   # sd — workable threshold
-MIN_CONSEC    = 5
-MIN_CONSEC_SU = 6
-MIN_CONSEC_SD = 6
-# After su or sd fires, the OPPOSITE gesture needs this higher confidence
-# for OPPOSITE_LOCKOUT_SEC to block the natural "arm return" motion.
-OPPOSITE_LOCKOUT_CONF = 0.94
-OPPOSITE_LOCKOUT_SEC  = 1.4
+HISTORY_LEN   = 9       # wider vote window = less noise
+MIN_CONF      = 0.82    # sl / sr — deliberate swipes only
+MIN_CONF_SU   = 0.65    # su — direction check is extra guard
+MIN_CONF_SD   = 0.65    # sd — direction check is extra guard
+MIN_CONSEC    = 7       # require 7 consecutive frames before triggering
+MIN_CONSEC_SU = 7
+MIN_CONSEC_SD = 7
+MIN_MARGIN    = 0.20    # top must beat runner-up by 20% (stricter)
 BUFFER_SIZE   = WINDOW_SIZE * 3
-COOLDOWN_SEC  = 0.45
+COOLDOWN_SEC  = 1.2     # 1.2s between gestures prevents rapid false triggers
+# After su fires, block sd for this long (arm return motion protection)
+# and vice versa.
+OPPOSITE_LOCKOUT_SEC = 1.8
+
+# ── Wrist keypoint indices in the 45-column position feature vector ──
+# UPPER_BODY_PARTS: l_shoulder(0), r_shoulder(1), l_elbow(2), r_elbow(3),
+#   l_wrist(4), r_wrist(5) ... each × 3 axes (x=0, y=1, z=2)
+_LW_X_IDX = 12   # left_wrist_x
+_LW_Y_IDX = 13   # left_wrist_y
+_RW_X_IDX = 15   # right_wrist_x
+_RW_Y_IDX = 16   # right_wrist_y
+_MIN_VERT_DISP  = 0.12  # min |wrist-Y net disp| for su/sd (shoulder-widths)
+_MIN_HORIZ_DISP = 0.18  # min |wrist-X net disp| for sl/sr
 
 # ── Grid layout ───────────────────────────────────────────────────────────
 GRID_ROWS = 8
@@ -141,8 +151,8 @@ class GestureController:
         self._last_gesture   = "idle"
         self._last_event_time  = 0.0
         self._last_event_label = "idle"
-        self._last_su_fired: float = 0.0   # timestamp when su last fired
-        self._last_sd_fired: float = 0.0   # timestamp when sd last fired
+        self._last_su_fired: float = 0.0
+        self._last_sd_fired: float = 0.0
 
         self.display_gesture: str   = "idle"
         self.display_until:   float = 0.0
@@ -166,8 +176,13 @@ class GestureController:
 
         df          = pd.DataFrame(list(self._buffer))
         features    = extract_features(df)
-        window_vec  = features[-WINDOW_SIZE:].flatten().reshape(1, -1)
+        window_arr  = features[-WINDOW_SIZE:]           # (18, 90)
+        window_vec  = window_arr.flatten().reshape(1, -1)
         window_std  = (window_vec - self.mean_) / self.std_
+
+        # Net displacement for physical direction checks (not fed to model)
+        n_pos    = window_arr.shape[1] // 2             # 45
+        net_disp = window_arr[-1, :n_pos] - window_arr[0, :n_pos]  # (45,)
 
         probs    = forward_pass(window_std, self.weights, self.biases)
         pred_idx = int(np.argmax(probs))
@@ -175,25 +190,61 @@ class GestureController:
 
         raw = self.idx_to_label.get(pred_idx, "idle")
 
-        # Per-gesture confidence gate.
-        # After su fires, sd (arm returning to neutral) needs very high
-        # confidence for OPPOSITE_LOCKOUT_SEC — blocks false down after up.
-        # Same logic in reverse for su after sd.
+        # Per-gesture confidence threshold
         now = time.time()
-        if raw == "sd":
-            if (now - self._last_su_fired) < OPPOSITE_LOCKOUT_SEC:
-                threshold = OPPOSITE_LOCKOUT_CONF
-            else:
-                threshold = MIN_CONF_SD
-        elif raw == "su":
-            if (now - self._last_sd_fired) < OPPOSITE_LOCKOUT_SEC:
-                threshold = OPPOSITE_LOCKOUT_CONF
-            else:
-                threshold = MIN_CONF_SU
+        if raw == "su":
+            threshold = MIN_CONF_SU
+        elif raw == "sd":
+            threshold = MIN_CONF_SD
+        elif raw == "sr":
+            threshold = MIN_CONF  # margin check below provides extra guard
         else:
             threshold = MIN_CONF
         if conf < threshold:
             raw = "idle"
+
+        # Margin check for sl/sr (not su/sd — direction verification handles those)
+        if raw != "idle" and raw not in ("su", "sd"):
+            sorted_p = np.sort(probs[0])[::-1]
+            if sorted_p[0] - sorted_p[1] < MIN_MARGIN:
+                raw = "idle"
+
+        # ── Physical direction verification for su / sd ───────────────
+        # MediaPipe Y increases downward: su → negative Y disp, sd → positive.
+        # Also require Y displacement to dominate X (no diagonal gestures).
+        if raw in ("su", "sd"):
+            lw_y = net_disp[_LW_Y_IDX]; lw_x = net_disp[_LW_X_IDX]
+            rw_y = net_disp[_RW_Y_IDX]; rw_x = net_disp[_RW_X_IDX]
+            if abs(lw_y) >= abs(rw_y):
+                wy, wx = lw_y, lw_x
+            else:
+                wy, wx = rw_y, rw_x
+            if abs(wy) < _MIN_VERT_DISP or abs(wy) <= abs(wx):
+                raw = "idle"
+            elif wy < 0:
+                raw = "su"
+            else:
+                raw = "sd"
+
+        # ── Opposite-gesture lockout (arm return protection) ──────────
+        # After su fires, the hand returns downward — block sd during that window.
+        # After sd fires, the hand returns upward  — block su during that window.
+        if raw == "sd" and (now - self._last_su_fired) < OPPOSITE_LOCKOUT_SEC:
+            raw = "idle"
+        if raw == "su" and (now - self._last_sd_fired) < OPPOSITE_LOCKOUT_SEC:
+            raw = "idle"
+
+        # ── Horizontal displacement check for sl / sr ───────────────
+        # Require minimum X movement AND X > Y (no body-sway false positives).
+        if raw in ("sl", "sr"):
+            lw_x = net_disp[_LW_X_IDX]; lw_y = net_disp[_LW_Y_IDX]
+            rw_x = net_disp[_RW_X_IDX]; rw_y = net_disp[_RW_Y_IDX]
+            if abs(lw_x) >= abs(rw_x):
+                wx, wy = lw_x, lw_y
+            else:
+                wx, wy = rw_x, rw_y
+            if abs(wx) < _MIN_HORIZ_DISP or abs(wx) <= abs(wy):
+                raw = "idle"
 
         self._history.pop(0)
         self._history.append(raw)
@@ -221,9 +272,9 @@ class GestureController:
             self.display_gesture = voted
             self.display_until   = now + 1.8
             self._last_event_time = now
-            if voted == "su":
+            if fired == "su":
                 self._last_su_fired = now
-            elif voted == "sd":
+            elif fired == "sd":
                 self._last_sd_fired = now
         self._last_event_label = voted if voted != "idle" else "idle"
         return fired

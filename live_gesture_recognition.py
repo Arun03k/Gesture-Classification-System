@@ -31,11 +31,31 @@ SLIDESHOW_URL = "http://127.0.0.1:8800/event"
 
 # Pipeline constants (window/smoothing/debounce — tuned for live use)
 WINDOW_SIZE  = 18       # frames per inference window
-HISTORY_LEN  = 11       # majority-vote history length (wider vote = less noise)
-MIN_CONF     = 0.72     # minimum softmax confidence to accept non-idle
+HISTORY_LEN  = 11       # majority-vote history length (wider = more stable)
+MIN_CONF     = 0.80     # minimum softmax confidence to accept non-idle
 MIN_CONSEC   = 8        # debounce: require N consecutive non-idle windows
 BUFFER_SIZE  = WINDOW_SIZE * 3   # rolling frame buffer (ensures correct velocity)
-COOLDOWN_SEC = 2.0  # seconds to wait before next gesture can fire
+COOLDOWN_SEC = 2.0      # seconds to wait before next gesture can fire
+MIN_MARGIN   = 0.15     # top prediction must beat runner-up by this margin
+
+# Per-class confidence overrides
+# su/sd: low threshold because direction verification is the real guard.
+# sr: high threshold because small body sway mimics a rightward move.
+PER_CLASS_MIN_CONF = {
+    "su": 0.40,
+    "sd": 0.50,
+    "sr": 0.85,
+}
+
+# ── Wrist keypoint indices in the 45-column position feature vector ──
+# UPPER_BODY_PARTS order: l_shoulder(0), r_shoulder(1), l_elbow(2), r_elbow(3),
+#   l_wrist(4), r_wrist(5), ...   each × 3 axes (x=0, y=1, z=2)
+_LW_X_IDX = 12   # left_wrist_x   = 4 × 3 + 0
+_LW_Y_IDX = 13   # left_wrist_y   = 4 × 3 + 1
+_RW_X_IDX = 15   # right_wrist_x  = 5 × 3 + 0
+_RW_Y_IDX = 16   # right_wrist_y  = 5 × 3 + 1
+_MIN_VERT_DISP  = 0.04  # minimum |wrist-Y net displacement| for su/sd
+_MIN_HORIZ_DISP = 0.12  # minimum |wrist-X net displacement| for sl/sr
 
 # Short model label → slideshow command name used by client.js
 LABEL_TO_SLIDESHOW = {
@@ -98,7 +118,6 @@ class LiveGestureRecogniser:
         self._history: list = ["idle"] * HISTORY_LEN
         self._consec:  int  = 0
         self._last_gesture  = "idle"
-
         # Display state
         self._current_label:  str   = "idle"
         self._display_label:  str   = "idle"
@@ -139,8 +158,16 @@ class LiveGestureRecogniser:
         df = pd.DataFrame(list(self._buffer))
 
         features = extract_features(df)
-        window_feat = features[-WINDOW_SIZE:]  # last WINDOW_SIZE rows
-        window_vec  = window_feat.flatten().reshape(1, -1)
+        window_feat = features[-WINDOW_SIZE:]  # last WINDOW_SIZE rows  shape (18, 90)
+
+        # Net displacement: final position minus initial position over the window.
+        # This is the primary discriminator for su/sd/r_cw:
+        #   su  → wrist y net negative (wrist rose)
+        #   sd  → wrist y net positive (wrist fell)
+        #   r_cw → wrist net ≈ 0 (circular, returns to start)
+        n_pos = window_feat.shape[1] // 2   # 45 position features
+        net_disp = window_feat[-1, :n_pos] - window_feat[0, :n_pos]  # shape (45,)
+        window_vec = np.concatenate([window_feat.flatten(), net_disp]).reshape(1, -1)
 
         # Standardise
         window_std  = (window_vec - self.mean_) / self.std_
@@ -151,8 +178,55 @@ class LiveGestureRecogniser:
         conf     = float(probs[0, pred_idx])
 
         raw_label = self.idx_to_label.get(pred_idx, "idle")
-        if conf < MIN_CONF:
+        # Apply per-class confidence threshold
+        threshold = PER_CLASS_MIN_CONF.get(raw_label, MIN_CONF)
+        if conf < threshold:
             raw_label = "idle"
+
+        # Confidence margin: top prediction must clearly beat runner-up.
+        # SKIPPED for su/sd — direction verification is the real safety gate
+        # and the margin check was blocking valid weak-confidence su predictions.
+        if raw_label != "idle" and raw_label not in ("su", "sd"):
+            sorted_probs = np.sort(probs[0])[::-1]
+            if sorted_probs[0] - sorted_probs[1] < MIN_MARGIN:
+                raw_label = "idle"
+
+        # ── Direction verification for su / sd ────────────────────────
+        # Also runs when model predicts anything with conf >= 0.40 and
+        # the physical check identifies it as a vertical gesture.
+        # MediaPipe Y increases downward: su → negative Y disp, sd → positive.
+        # Require Y displacement to DOMINATE X (no diagonal gestures).
+        if raw_label in ("su", "sd"):
+            lw_y = net_disp[_LW_Y_IDX]; lw_x = net_disp[_LW_X_IDX]
+            rw_y = net_disp[_RW_Y_IDX]; rw_x = net_disp[_RW_X_IDX]
+            # active hand = larger absolute Y movement
+            if abs(lw_y) >= abs(rw_y):
+                wrist_y_disp, wrist_x_disp = lw_y, lw_x
+            else:
+                wrist_y_disp, wrist_x_disp = rw_y, rw_x
+            if abs(wrist_y_disp) < _MIN_VERT_DISP or abs(wrist_y_disp) <= abs(wrist_x_disp):
+                raw_label = "idle"        # insufficient or diagonal motion
+            elif wrist_y_disp < 0:
+                raw_label = "su"          # upward (negative Y)
+            else:
+                raw_label = "sd"          # downward (positive Y)
+
+        # ── Horizontal displacement check for sl / sr ─────────────────
+        # Body sway and pose drift can look like a horizontal swipe.
+        # Require: (a) minimum X displacement AND (b) X > Y displacement
+        # so only deliberate horizontal arm movement passes.
+        if raw_label in ("sl", "sr"):
+            lw_x = net_disp[_LW_X_IDX]
+            rw_x = net_disp[_RW_X_IDX]
+            lw_y = net_disp[_LW_Y_IDX]
+            rw_y = net_disp[_RW_Y_IDX]
+            # active hand = larger horizontal movement
+            if abs(lw_x) >= abs(rw_x):
+                wrist_x_disp, wrist_y_disp = lw_x, lw_y
+            else:
+                wrist_x_disp, wrist_y_disp = rw_x, rw_y
+            if abs(wrist_x_disp) < _MIN_HORIZ_DISP or abs(wrist_x_disp) <= abs(wrist_y_disp):
+                raw_label = "idle"        # drift/diagonal — not a real swipe
 
         # Majority-vote smoothing
         self._history.pop(0)
