@@ -304,7 +304,8 @@ class NeuralNetwork:
     Optimizers (O12): 'sgd', 'momentum', 'adam'.
     """
 
-    def __init__(self, layer_sizes, dropout_rate=0.0, l2_lambda=0.0, seed=42):
+    def __init__(self, layer_sizes, dropout_rate=0.0, l2_lambda=0.0, seed=42,
+                 init_mode='small'):
         self.rng = np.random.default_rng(seed)
         self.n_layers = len(layer_sizes) - 1
         self.layer_sizes = layer_sizes
@@ -312,13 +313,16 @@ class NeuralNetwork:
         self.l2_lambda = l2_lambda
         self.training = True
 
-        # Weight init: small random (* 0.1)
+        # Weight init
         self.weights = []
         self.biases = []
         for i in range(self.n_layers):
             fan_in = layer_sizes[i]
             fan_out = layer_sizes[i + 1]
-            W = self.rng.standard_normal(size=(fan_in, fan_out)) * 0.1
+            if init_mode == 'he':
+                W = self.rng.standard_normal(size=(fan_in, fan_out)) * np.sqrt(2.0 / fan_in)
+            else:
+                W = self.rng.standard_normal(size=(fan_in, fan_out)) * 0.1
             b = np.zeros((1, fan_out))
             self.weights.append(W)
             self.biases.append(b)

@@ -31,11 +31,11 @@ SLIDESHOW_URL = "http://127.0.0.1:8800/event"
 
 # Pipeline constants (window/smoothing/debounce — tuned for live use)
 WINDOW_SIZE  = 18       # frames per inference window
-HISTORY_LEN  = 9        # majority-vote history length
-MIN_CONF     = 0.82     # minimum softmax confidence to accept non-idle
-MIN_CONSEC   = 10       # debounce: require N consecutive non-idle windows
+HISTORY_LEN  = 11       # majority-vote history length (wider vote = less noise)
+MIN_CONF     = 0.72     # minimum softmax confidence to accept non-idle
+MIN_CONSEC   = 8        # debounce: require N consecutive non-idle windows
 BUFFER_SIZE  = WINDOW_SIZE * 3   # rolling frame buffer (ensures correct velocity)
-COOLDOWN_SEC = 2    # seconds to wait before next gesture can fire
+COOLDOWN_SEC = 2.0  # seconds to wait before next gesture can fire
 
 # Short model label → slideshow command name used by client.js
 LABEL_TO_SLIDESHOW = {
