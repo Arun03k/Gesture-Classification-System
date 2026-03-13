@@ -29,6 +29,21 @@ The system:
 
 ---
 
+## Related Repositories (Workspace Paths)
+
+- `../orga` — central organization and submission overview
+- `../ml-package` — reusable custom ML framework package (O1, O1.1)
+
+---
+
+## Team Responsibilities
+
+- All mandatory requirements and all selected optionals were implemented collaboratively by the full team.
+- **Game implementation (O10)** in `snake_game/` was implemented by **Arun Kumar**.
+- All other optional requirements were handled jointly by Arun Kumar, Aswathy Baiju, and Nayana S Pawar.
+
+---
+
 ## Implemented Requirements
 
 ### Mandatory Requirements
