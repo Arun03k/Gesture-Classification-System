@@ -75,29 +75,113 @@ The system:
 
 ---
 
-## Repository Structure
+## Game Implementation (Snake)
+
+As part of optional requirement **O10**, a gesture-controlled Snake game is included.
+
+- **File:** `snake_game/snake_game.py`
+
+### How to Play
+
+1.  Run the script from the `final-submission` directory:
+    ```bash
+    python snake_game/snake_game.py
+    ```
+2.  A Pygame window will open, and gesture detection will start automatically.
+
+### Controls
+
+The snake is controlled using the following gestures:
+
+- **Swipe Up**: Move the snake up.
+- **Swipe Down**: Move the snake down.
+- **Swipe Left**: Move the snake left.
+- **Swipe Right**: Move the snake right.
+
+The game uses the same real-time gesture recognition pipeline as the slideshow controller.
+
+---
+
+## Project Structure
 
 ```
 final-submission/
-│
-├── live_gesture_recognition.py     # Main entry point: real-time webcam inference
-├── requirements.txt                # pip dependencies
-│
-├── pipeline/
-│   ├── gesture_pipeline.py         # Shared inference pipeline (O1): feature extraction,
-│   │                               #   normalization, forward pass
-│   └── __init__.py
-│
+├── .git/
+├── .gitignore
+├── .ipynb_checkpoints/
+├── data/
+│   ├── csv_results/
+│   │   ├── ground_truth/
+│   │   ├── poses_only/
+│   │   └── poses_with_ground_truth/
+│   ├── elan_data/
+│   │   ├── elan_files/
+│   │   └── text_files/
+│   ├── predicted_events/
+│   ├── processed/
+│   │   ├── game/
+│   │   └── optionals/
+│   └── videos/
+├── live_gesture_recognition.py
+├── ml_project_team_31_teaser_video.mp4
 ├── model_creation/
-│   ├── base_neural_net.py          # Feedforward NN with vanilla SGD (M1)
-│   ├── base_neural_net_pca.py      # NN variant for PCA-reduced inputs (O2)
-│   ├── adam_neural_net.py          # Adam optimizer + full-featured NeuralNetwork
-│   │                               #   with SGD / Momentum / Adam support (O12)
-│   ├── pca_functions.py            # ManualPCA — NumPy eigendecomposition (O2)
-│   ├── helper_functions.py         # Activations, metrics, training-history I/O,
-│   │                               #   visualization utilities (O1.1)
-│   ├── gesture_recognition_preproc.ipynb   # Data preparation (M7)
-│   ├── gesture_recognition_ml.ipynb        # Model training & evaluation (M7)
+│   ├── .ipynb_checkpoints/
+│   ├── adam_neural_net.py
+│   ├── base_neural_net.py
+│   ├── base_neural_net_pca.py
+│   ├── gesture_recognition_game.ipynb
+│   ├── gesture_recognition_ml.ipynb
+│   ├── gesture_recognition_optionals.ipynb
+│   ├── gesture_recognition_preproc.ipynb
+│   ├── gesture_recognition_preproc_optionals.ipynb
+│   ├── helper_functions.py
+│   ├── label_mapping_optionals.npz
+│   ├── model_weights_optionals.npz
+│   ├── pca_functions.py
+│   ├── scaler_params_optionals.npz
+│   └── __pycache__/
+├── notebooks/
+│   ├── create_csv.ipynb
+│   └── process_videos/
+│       ├── helpers/
+│       ├── keypoint_mapping.yml
+│       ├── live_video_feed.py
+│       └── video_to_csv.py
+├── performance_score/
+│   ├── .ipynb_checkpoints/
+│   ├── calculator.py
+│   ├── events_visualization.py
+│   └── log_emitted_events_to_csv.py
+├── pipeline/
+│   ├── gesture_pipeline.py
+│   └── __init__.py
+├── presentation/
+│   └── Team 31.pptx
+├── README.md
+├── requirements.txt
+├── RUN_COMMANDS.txt
+├── slideshow/
+│   ├── control_slideshow_example.py
+│   ├── event_listeners.js
+│   ├── helper_methods.js
+│   ├── slideshow.html
+│   ├── slideshow_server.py
+│   └── static/
+│       ├── images/
+│       ├── index.html
+│       ├── js/
+│       └── slides.csv
+├── snake_game/
+│   ├── .ipynb_checkpoints/
+│   └── snake_game.py
+├── venv/
+└── visualizations/
+    ├── eda/
+    │   ├── arun_optionals/
+    │   ├── aswathy_optionals/
+    │   └── nayana_optionals/
+    └── training/
+```
 │   └── gesture_recognition_optionals.ipynb # Optionals experiments (O2, O12)
 │
 ├── slideshow/
