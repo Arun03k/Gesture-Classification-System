@@ -51,7 +51,7 @@ The system:
 | ID | Description | Status |
 | -- | ----------- | ------ |
 | M1 | Neural network implemented with Python and NumPy only | Done |
-| M2 | Detection of mandatory gestures: Swipe Right, Swipe Left, Swipe Up, Swipe Down, Rotate Clockwise | Done |
+| M2 | Detection of mandatory gestures: Swipe Right, Swipe Left, Rotate Clockwise | Done |
 | M3 | Reveal.js slideshow control via real-time gesture prediction | Done |
 | M4 | Deployable using `pip` / `requirements.txt` | Done |
 | M5 | Teaser video (H264, mp4 format, 1–2 min) | Done |
@@ -67,10 +67,10 @@ The system:
 | O1 | ML Framework Package — reusable pipeline module (`pipeline/`, `model_creation/`) | Done |
 | O1.1 | Visualization Module — training curves, confusion matrix, multi-model comparison plots | Done |
 | O2 | Principal Component Analysis (PCA) from scratch using NumPy eigendecomposition | Done |
-| O3 | Additional gesture: Swipe Up | Done |
+| O3 | Additional gesture: Swipe Up, Swipe Down | Done |
 | O5 | Additional gesture: Rotate Counter-Clockwise | Done |
 | O9 | Attention Detection — confidence gating, debounce, cooldown, no-person guard | Done |
-| O10 | Game / Slideshow Image Control — zoom, move, rotate, reset via gestures | Done |
+| O10 | Snake Game | Done |
 | O12 | Gradient Descent Variations — SGD, Momentum, Adam (all implemented from scratch) | Done |
 
 ---
