@@ -37,13 +37,16 @@ MIN_CONSEC   = 8        # debounce: require N consecutive non-idle windows
 BUFFER_SIZE  = WINDOW_SIZE * 3   # rolling frame buffer (ensures correct velocity)
 COOLDOWN_SEC = 2.0      # seconds to wait before next gesture can fire
 MIN_MARGIN   = 0.15     # top prediction must beat runner-up by this margin
+IDLE_PRIME_FRAMES = 10  # require stable idle frames before any new gesture can trigger
+OPPOSITE_LOCKOUT_SEC = 2.0  # block su right after sd (and vice versa)
+MAX_IDLE_PROB_FOR_GESTURE = 0.30  # suppress non-idle if idle probability is still high
 
 # Per-class confidence overrides
 # su/sd: low threshold because direction verification is the real guard.
 # sr: high threshold because small body sway mimics a rightward move.
 PER_CLASS_MIN_CONF = {
-    "su": 0.40,
-    "sd": 0.50,
+    "su": 0.60,
+    "sd": 0.62,
     "sr": 0.85,
 }
 
@@ -54,8 +57,16 @@ _LW_X_IDX = 12   # left_wrist_x   = 4 × 3 + 0
 _LW_Y_IDX = 13   # left_wrist_y   = 4 × 3 + 1
 _RW_X_IDX = 15   # right_wrist_x  = 5 × 3 + 0
 _RW_Y_IDX = 16   # right_wrist_y  = 5 × 3 + 1
-_MIN_VERT_DISP  = 0.04  # minimum |wrist-Y net displacement| for su/sd
+_MIN_VERT_DISP  = 0.10  # minimum |wrist-Y net displacement| for su/sd
 _MIN_HORIZ_DISP = 0.12  # minimum |wrist-X net displacement| for sl/sr
+_VERT_DOM_RATIO = 1.35  # require |Y| to dominate |X| for vertical swipes
+_MAX_SWIPE_CIRCULARITY = 2.2  # reject su/sd if wrist trajectory looks circular
+# Absolute wrist-height gates (chest-centered coords) to ensure full strokes.
+# These gates block "prepare up before down" from firing su.
+_SU_START_MIN_Y = 0.10   # su should start below shoulder line
+_SU_END_MAX_Y = -0.02    # su should end above shoulder line
+_SD_START_MAX_Y = -0.06   # sd should start above shoulder line
+_SD_END_MIN_Y = 0.06      # sd should end below shoulder line
 
 # Short model label → slideshow command name used by client.js
 LABEL_TO_SLIDESHOW = {
@@ -118,6 +129,9 @@ class LiveGestureRecogniser:
         self._history: list = ["idle"] * HISTORY_LEN
         self._consec:  int  = 0
         self._last_gesture  = "idle"
+        self._idle_frames: int = IDLE_PRIME_FRAMES
+        self._last_su_fired: float = 0.0
+        self._last_sd_fired: float = 0.0
         # Display state
         self._current_label:  str   = "idle"
         self._display_label:  str   = "idle"
@@ -135,6 +149,7 @@ class LiveGestureRecogniser:
         model_dir = get_model_dir(BASE_MODEL_DIR, self.model_name)
         self.weights, self.biases, self.mean_, self.std_, self.idx_to_label = \
             load_model_artifacts(model_dir)
+        self.label_to_idx = {v: k for k, v in self.idx_to_label.items()}
 
     # Append one MediaPipe frame to the rolling buffer
     def _add_frame(self, landmarks) -> None:
@@ -183,6 +198,12 @@ class LiveGestureRecogniser:
         if conf < threshold:
             raw_label = "idle"
 
+        # If idle probability is still high, suppress non-idle prediction.
+        if raw_label != "idle":
+            idle_idx = self.label_to_idx.get("idle")
+            if idle_idx is not None and float(probs[0, idle_idx]) > MAX_IDLE_PROB_FOR_GESTURE:
+                raw_label = "idle"
+
         # Confidence margin: top prediction must clearly beat runner-up.
         # SKIPPED for su/sd — direction verification is the real safety gate
         # and the margin check was blocking valid weak-confidence su predictions.
@@ -202,14 +223,44 @@ class LiveGestureRecogniser:
             # active hand = larger absolute Y movement
             if abs(lw_y) >= abs(rw_y):
                 wrist_y_disp, wrist_x_disp = lw_y, lw_x
+                wrist_xy = window_feat[:, [_LW_X_IDX, _LW_Y_IDX]]
             else:
                 wrist_y_disp, wrist_x_disp = rw_y, rw_x
-            if abs(wrist_y_disp) < _MIN_VERT_DISP or abs(wrist_y_disp) <= abs(wrist_x_disp):
+                wrist_xy = window_feat[:, [_RW_X_IDX, _RW_Y_IDX]]
+
+            start_y = float(wrist_xy[0, 1])
+            end_y = float(wrist_xy[-1, 1])
+
+            # Circularity check: circular wrist tracks (high path/net ratio)
+            # are usually rotations, not vertical swipes.
+            path_len = np.linalg.norm(np.diff(wrist_xy, axis=0), axis=1).sum()
+            net_len = np.linalg.norm(wrist_xy[-1] - wrist_xy[0])
+            circularity = path_len / (net_len + 1e-6)
+
+            if (
+                abs(wrist_y_disp) < _MIN_VERT_DISP
+                or abs(wrist_y_disp) <= _VERT_DOM_RATIO * abs(wrist_x_disp)
+                or circularity > _MAX_SWIPE_CIRCULARITY
+            ):
                 raw_label = "idle"        # insufficient or diagonal motion
             elif wrist_y_disp < 0:
                 raw_label = "su"          # upward (negative Y)
             else:
                 raw_label = "sd"          # downward (positive Y)
+
+            # Full-stroke gate: require meaningful start/end heights so prep
+            # motion (lifting hand before a down swipe) does not fire su.
+            if raw_label == "su" and not (start_y >= _SU_START_MIN_Y and end_y <= _SU_END_MAX_Y):
+                raw_label = "idle"
+            if raw_label == "sd" and not (start_y <= _SD_START_MAX_Y and end_y >= _SD_END_MIN_Y):
+                raw_label = "idle"
+
+            # Opposite lockout: block false opposite trigger from arm return.
+            now = time.time()
+            if raw_label == "sd" and (now - self._last_su_fired) < OPPOSITE_LOCKOUT_SEC:
+                raw_label = "idle"
+            if raw_label == "su" and (now - self._last_sd_fired) < OPPOSITE_LOCKOUT_SEC:
+                raw_label = "idle"
 
         # ── Horizontal displacement check for sl / sr ─────────────────
         # Body sway and pose drift can look like a horizontal swipe.
@@ -245,6 +296,18 @@ class LiveGestureRecogniser:
         else:
             self._consec       = 0
             self._last_gesture = "idle"
+
+        # Idle-prime gate: require a short stable idle period before allowing
+        # any new gesture to fire, which blocks self-triggering from pose drift.
+        if voted == "idle":
+            self._idle_frames = min(IDLE_PRIME_FRAMES, self._idle_frames + 1)
+        else:
+            if self._idle_frames < IDLE_PRIME_FRAMES:
+                voted = "idle"
+                self._consec = 0
+                self._last_gesture = "idle"
+            else:
+                self._idle_frames = 0
 
         return voted
 
@@ -341,6 +404,10 @@ class LiveGestureRecogniser:
                         self._display_label = full_label
                         self._display_until = now + 2.0
                         last_event_time     = now
+                        if predicted == "su":
+                            self._last_su_fired = now
+                        elif predicted == "sd":
+                            self._last_sd_fired = now
                     last_event_label = full_label if full_label != "idle" else "idle"
 
                 else:
@@ -397,3 +464,5 @@ if __name__ == "__main__":
         model_name=args.model,
     )
     recogniser.run()
+
+
