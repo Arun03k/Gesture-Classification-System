@@ -317,19 +317,13 @@ The live recogniser filters unintended commands through a multi-layer guard:
 
 Together these layers ensure only deliberate, sustained gestures emit commands.
 
-### O10 — Game / Slideshow Image Control
+### O10 — Snake-Game
 
-The Reveal.js client (`slideshow/static/js/client.js`) supports gesture-driven image manipulation on each slide:
 
 | Command | Effect |
 | ------- | ------ |
-| `move_left / right / up / down` | Translate slide image by 50 px |
-| `zoom_in / zoom_out` | Scale slide image ±0.2 |
-| `rotate` | Rotate image +90° |
-| `rotate_counter_clock` | Rotate image −90° |
-| `reset` | Restore original transform |
+| `move_left / right / up / down` | Control game |
 
-All transforms are applied via CSS `transform` (translate + scale + rotate) allowing full compositional control.
 
 ### O12 — Gradient Descent Variations
 
@@ -365,7 +359,7 @@ python -m performance_score.events_visualization \
 
 - Format: mp4
 - Codec: H264
-- Duration: 1–2 minutes
+- Duration: 1 minute
 - Includes official HCI intro/outro template
 
 ---
