@@ -118,48 +118,7 @@ final-submission/
 ├── live_gesture_recognition.py
 ├── requirements.txt
 └── README.md
-```
-│   └── gesture_recognition_optionals.ipynb # Optionals experiments (O2, O12)
-│
-├── slideshow/
-│   ├── slideshow_server.py         # FastAPI + WebSocket server (M3)
-│   ├── slideshow.html              # Reveal.js slideshow page
-│   ├── control_slideshow_example.py
-│   ├── event_listeners.js
-│   ├── helper_methods.js
-│   └── static/
-│       ├── index.html
-│       ├── slides.csv              # Slide definitions (image, title, subtitle)
-│       ├── js/client.js            # WebSocket listener + image manipulation (O10)
-│       └── images/
-│
-├── performance_score/
-│   ├── calculator.py               # Performance scoring (M6)
-│   ├── events_visualization.py     # Ground-truth vs. predicted visualization (M6)
-│   └── log_emitted_events_to_csv.py
-│
-├── process_videos/
-│   ├── video_to_csv.py             # Extract keypoints from video files
-│   ├── live_video_feed.py
-│   ├── keypoint_mapping.yml
-│   └── helpers/
-│       ├── data_to_csv.py
-│       └── video_to_dataframe.py
-│
-├── data/
-│   ├── processed/                  # Saved model weights, scaler, label mapping
-│   ├── csv_results/
-│   │   ├── ground_truth/           # Ground-truth CSVs for all performers
-│   │   └── poses_with_ground_truth/
-│   ├── elan_data/                  # ELAN annotation files and text transcripts
-│   └── videos/
-│
-├── notebooks/
-│   └── create_csv.ipynb            # Keypoint extraction notebook
-│
-└── visualizations/
-    └── eda/                        # Exploratory data analysis plots
-```
+
 
 ---
 
