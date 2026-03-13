@@ -40,6 +40,15 @@ def read_data(args):
     ground_truth = ground_truth[~rows_to_drop]
     events = events[~rows_to_drop]
 
+    # If the ground truth uses generic "rotate" (not direction-specific),
+    # remap our rotate_clockwise / rotate_anticlockwise to "rotate" so labels match.
+    gt_labels = set(ground_truth["ground_truth"].unique())
+    if "rotate" in gt_labels and not ({"rotate_clockwise", "rotate_anticlockwise"} & gt_labels):
+        events["events"] = events["events"].replace({
+            "rotate_clockwise": "rotate",
+            "rotate_anticlockwise": "rotate",
+        })
+
     return events, ground_truth
 
 

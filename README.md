@@ -248,7 +248,7 @@ Implemented from scratch in `adam_neural_net.py` (`NeuralNetwork` class):
 | Rotate Clockwise | `r_cw` | M2 (mandatory) |
 | Swipe Up | `su` | O3 (optional) |
 | Rotate Counter-Clockwise | `r_ccw` | O5 (optional) |
-| Swipe Down | `sd` | additional |
+| Swipe Down | `sd` | O3 (optional) |
 | Idle | `idle` | — |
 
 ---

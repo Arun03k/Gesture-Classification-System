@@ -1,0 +1,77 @@
+RUN_COMMANDS.txt — Exact repo commands
+
+Notes:
+- Run from the project root (where this file sits).
+- Use PowerShell on Windows for the PowerShell examples. CMD variants are provided where relevant.
+- Activate your venv first:
+
+PowerShell:
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+
+CMD:
+.venv\Scripts\activate
+pip install -r requirements.txt
+
+-------------------------------------------------------------------------------
+Per-model exact commands (copy-paste in front of professor)
+-------------------------------------------------------------------------------
+# 1) Single-file demo: generate predicted events for all 3 models
+python performance_score/log_emitted_events_to_csv.py --input_frames_csv demo_data/demo_video_rotate_frames.csv --output_dir demo_data/csv_results --output_csv_name demo_video_rotate_events_mandatory.csv --model mandatory
+python performance_score/log_emitted_events_to_csv.py --input_frames_csv demo_data/demo_video_rotate_frames.csv --output_dir demo_data/csv_results --output_csv_name demo_video_rotate_events_optionals.csv --model optionals
+python performance_score/log_emitted_events_to_csv.py --input_frames_csv demo_data/demo_video_rotate_frames.csv --output_dir demo_data/csv_results --output_csv_name demo_video_rotate_events_game.csv --model game
+
+# 2) Score each generated demo file against demo ground-truth
+python performance_score/calculator.py --predicted_events_csv=demo_data/csv_results/demo_video_rotate_events_mandatory.csv --ground_truth_csv=demo_data/demo_video_rotate_only_ground_truth.csv
+python performance_score/calculator.py --predicted_events_csv=demo_data/csv_results/demo_video_rotate_events_optionals.csv --ground_truth_csv=demo_data/demo_video_rotate_only_ground_truth.csv
+python performance_score/calculator.py --predicted_events_csv=demo_data/csv_results/demo_video_rotate_events_game.csv --ground_truth_csv=demo_data/demo_video_rotate_only_ground_truth.csv
+
+# 3) Batch: run every model for every frames CSV under `data` (PowerShell)
+$models = @('mandatory','optionals','game')
+$frames = Get-ChildItem -Path data -Filter '*_frames.csv' -Recurse
+foreach ($m in $models) {
+  foreach ($f in $frames) {
+    $out = "${($f.BaseName)}_events_$m.csv"
+    python performance_score/log_emitted_events_to_csv.py --input_frames_csv $f.FullName --output_dir data/predicted_events --output_csv_name $out --model $m
+  }
+}
+
+# 4) Batch scoring: for each predicted events file, run calculator if a matching ground-truth exists
+# Assumes predicted filename: <person>_<gesture>_events_<model>.csv
+# and ground-truth filename: <person>_<gesture>_ground_truth.csv in data/csv_results/ground_truth
+$preds = Get-ChildItem -Path data/predicted_events -Filter '*_events_*.csv'
+foreach ($p in $preds) {
+  $base = ($p.BaseName -replace '_events_.*$','')
+  $gt_candidate = "data/csv_results/ground_truth/$base_ground_truth.csv"
+  if (Test-Path $gt_candidate) {
+    Write-Host "Scoring: $($p.Name)  vs  $gt_candidate"
+    python performance_score/calculator.py --predicted_events_csv=$p.FullName --ground_truth_csv=$gt_candidate
+  } else {
+    Write-Host "No ground-truth found for: $($p.Name)"
+  }
+}
+
+# 5) One-line CMD (Windows) to run three models on demo file
+python performance_score/log_emitted_events_to_csv.py --input_frames_csv demo_data/demo_video_rotate_frames.csv --output_dir demo_data/csv_results --output_csv_name demo_video_rotate_events_mandatory.csv --model mandatory && python performance_score/log_emitted_events_to_csv.py --input_frames_csv demo_data/demo_video_rotate_frames.csv --output_dir demo_data/csv_results --output_csv_name demo_video_rotate_events_optionals.csv --model optionals && python performance_score/log_emitted_events_to_csv.py --input_frames_csv demo_data/demo_video_rotate_frames.csv --output_dir demo_data/csv_results --output_csv_name demo_video_rotate_events_game.csv --model game
+
+-------------------------------------------------------------------------------
+Helpful extras
+-------------------------------------------------------------------------------
+# Run live recognition (webcam)
+python live_gesture_recognition.py --camera 0 --flip --slideshow --model mandatory
+
+# Start the slideshow server (if demonstrating slideshow integration)
+python slideshow/slideshow_server.py
+
+# Visualize events vs ground-truth (creates events_visualization.png)
+python performance_score/events_visualization.py --predicted_events_csv=demo_data/csv_results/demo_video_rotate_events_mandatory.csv --ground_truth_csv=demo_data/demo_video_rotate_frames_with_ground_truth.csv
+
+# Quick CSV inspection in-place
+python - <<'PY'
+import pandas as pd
+print(pd.read_csv('demo_data/csv_results/demo_video_rotate_events_mandatory.csv').head())
+PY
+
+-------------------------------------------------------------------------------
+End of file
