@@ -9,7 +9,7 @@ ml_framework @ git+https://gitlab2.informatik.uni-wuerzburg.de/hci/teaching/cour
 
 # Live Video
 opencv-python
-mediapipe
+mediapipe==0.10.14
 sanic
 websockets==13.1
 
