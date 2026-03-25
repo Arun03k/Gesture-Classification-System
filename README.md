@@ -1,4 +1,3 @@
-````markdown
 # Gesture-Controlled Slideshow System
 
 A real-time gesture recognition system built in Python that lets users control a slideshow using body movements detected from a live camera feed.
@@ -24,10 +23,10 @@ Detected gestures can be used to:
 
 Add your teaser video or preview asset inside the `presentation/` folder.
 
-**Teaser video:**
+**Teaser video:**  
 [▶ Watch the teaser video](presentation/teaser.mp4)
 
-> If you have a GIF or screenshot preview, you can also place it here for better GitHub rendering.
+> GitHub usually does not render embedded HTML video reliably in README files, so a direct link, GIF, or screenshot works better.
 
 ---
 
@@ -340,7 +339,6 @@ Built by:
 * No external ML frameworks used
 * All core ML logic, including neural network training, PCA, optimization, and evaluation, is implemented from scratch using **NumPy**
 
-```
 
-I can also turn it into a cleaner GitHub-style version with badges, a preview image section, and a more polished landing-page layout.
+I can also give you a more polished GitHub README with badges, centered title, preview GIF/image, and cleaner formatting.
 ```
