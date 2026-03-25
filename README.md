@@ -1,110 +1,134 @@
-# Final Submission – Machine Learning Project (WS25)
+````markdown
+# Gesture-Controlled Slideshow System
+
+A real-time gesture recognition system built in Python that lets users control a slideshow using body movements detected from a live camera feed.
+
+The project combines **MediaPipe Pose**, a **NumPy-only neural network**, real-time webcam inference, and **Reveal.js** slideshow control over WebSockets. It also includes a gesture-controlled Snake game and an evaluation pipeline for measuring prediction quality against ground-truth annotations.
 
 ---
 
-## Project Overview
+## Overview
 
-This repository contains the final submission of our Machine Learning project for WS25.
+This system captures body keypoints from a webcam, transforms them into motion-aware feature vectors, and classifies gestures in real time. Detected gestures can then be used to:
 
-The objective is to develop a **gesture classification system implemented in Python** that enables users to control a slideshow using body gestures detected from live camera input.
-
-The system:
-
-- Extracts body keypoints using **MediaPipe Pose**
-- Stores motion data in CSV format
-- Trains a neural network implemented from scratch using **NumPy only**
-- Detects gestures in real time via webcam
-- Integrates predictions into a **Reveal.js** slideshow controlled over WebSockets
-- Provides a performance evaluation mode for scoring against ground-truth transcripts
+- navigate a **Reveal.js** slideshow
+- rotate slides through gesture commands
+- control a **Snake game**
+- evaluate prediction quality using recorded event logs and transcripts
 
 ---
 
-## Team Members
+## Demo Video
 
-| Name | Student ID |
-| ---- | ---------- |
-| Arun Kumar | 3030010 |
-| Aswathy Baiju | 3168821 |
-| Nayana S Pawar | 3304785 |
+<!-- Update the path below if your teaser video is stored somewhere else -->
+<video src="presentation/teaser.mp4" controls width="100%"></video>
 
----
+If the video does not render inline in your platform, open it directly here:
 
-## Related Repositories (Workspace Paths)
-
-- `../orga` — central organization and submission overview
-- `../ml-package` — reusable custom ML framework package (O1, O1.1)
+[▶ Watch the teaser video](presentation/teaser.mp4)
 
 ---
 
-## Team Responsibilities
+## Key Features
 
-- All mandatory requirements and all selected optionals were implemented collaboratively by the full team.
-- **Game implementation (O10)** in `snake_game/` was implemented by **Arun Kumar**.
-- All other optional requirements were handled jointly by Arun Kumar, Aswathy Baiju, and Nayana S Pawar.
-
----
-
-## Implemented Requirements
-
-### Mandatory Requirements
-
-| ID | Description | Status |
-| -- | ----------- | ------ |
-| M1 | Neural network implemented with Python and NumPy only | Done |
-| M2 | Detection of mandatory gestures: Swipe Right, Swipe Left, Rotate Clockwise | Done |
-| M3 | Reveal.js slideshow control via real-time gesture prediction | Done |
-| M4 | Deployable using `pip` / `requirements.txt` | Done |
-| M5 | Teaser video (H264, mp4 format, 1–2 min) | Done |
-| M6 | Performance evaluation mode with `calculator.py` and scoring formula | Done |
-| M7 | Notebooks covering data preparation, hyperparameter search, and evaluation | Done |
+- **Real-time gesture recognition** from live webcam input
+- **Pose-based motion capture** using MediaPipe Pose
+- **NumPy-only neural network** with custom forward and backpropagation
+- **Reveal.js slideshow control** via WebSockets
+- **Performance evaluation mode** with event scoring against ground truth
+- **PCA from scratch** using eigendecomposition
+- **Multiple optimizers** implemented from scratch: SGD, Momentum, Adam
+- **Visualization utilities** for training curves, confusion matrices, and model comparison
+- **Gesture-controlled Snake game**
+- **Attention and confidence filtering** to suppress accidental commands
 
 ---
 
-### Optional Requirements
+## Supported Gestures
 
-| ID | Description | Status |
-| -- | ----------- | ------ |
-| O1 | ML Framework Package — reusable pipeline module (`pipeline/`, `model_creation/`) | Done |
-| O1.1 | Visualization Module — training curves, confusion matrix, multi-model comparison plots | Done |
-| O2 | Principal Component Analysis (PCA) from scratch using NumPy eigendecomposition | Done |
-| O3 | Additional gesture: Swipe Up, Swipe Down | Done |
-| O5 | Additional gesture: Rotate Counter-Clockwise | Done |
-| O9 | Attention Detection — confidence gating, debounce, cooldown, no-person guard | Done |
-| O10 | Snake Game | Done |
-| O12 | Gradient Descent Variations — SGD, Momentum, Adam (all implemented from scratch) | Done |
+| Gesture | Label | Action |
+| ------- | ----- | ------ |
+| Swipe Right | `sr` | Next slide / move right |
+| Swipe Left | `sl` | Previous slide / move left |
+| Rotate Clockwise | `r_cw` | Rotate slide clockwise |
+| Rotate Counter-Clockwise | `r_ccw` | Rotate slide counter-clockwise |
+| Swipe Up | `su` | Previous vertical slide / move up |
+| Swipe Down | `sd` | Next vertical slide / move down |
+| Idle | `idle` | No action |
 
 ---
 
-## Game Implementation (Snake)
+## How It Works
 
-As part of optional requirement **O10**, a gesture-controlled Snake game is included.
+### 1. Pose Extraction
+Body keypoints are extracted from webcam frames using **MediaPipe Pose**.
 
-- **File:** `snake_game/snake_game.py`
+### 2. Feature Engineering
+Each gesture window is transformed into a motion-aware feature vector using:
 
-### How to Play
+- chest-centered normalization
+- shoulder-width scaling
+- frame-to-frame velocity features
+- sliding temporal windows
 
-1.  Run the script from the `final-submission` directory:
-    ```bash
-    python snake_game/snake_game.py
-    ```
-2.  A Pygame window will open, and gesture detection will start automatically.
+**Feature size per window:**  
+`15 keypoints × 3 axes × 2 (position + velocity) = 90 features`
 
-### Controls
+### 3. Classification
+The feature vectors are passed into a fully connected neural network implemented entirely with **NumPy**.
 
-The snake is controlled using the following gestures:
+### 4. Live Prediction
+Predictions are smoothed and filtered using:
 
-- **Swipe Up**: Move the snake up.
-- **Swipe Down**: Move the snake down.
-- **Swipe Left**: Move the snake left.
-- **Swipe Right**: Move the snake right.
+- no-person detection
+- confidence thresholding
+- majority voting
+- consecutive-frame debounce
+- cooldown timing
 
-The game uses the same real-time gesture recognition pipeline as the slideshow controller.
+### 5. Action Layer
+Recognized gestures are mapped to slideshow commands or game controls.
+
+---
+
+## Model Details
+
+### Neural Network
+- Fully connected feedforward architecture
+- ReLU hidden activations
+- Softmax output layer
+- Cross-entropy loss
+- Custom backpropagation using NumPy only
+
+### Optimization
+Implemented from scratch in `model_creation/adam_neural_net.py`:
+
+- **SGD**
+- **Momentum SGD**
+- **Adam**
+
+Additional training features include:
+
+- mini-batch training
+- dropout
+- L2 regularization
+- gradient clipping
+- early stopping
+- learning-rate scheduling
+
+### PCA
+`model_creation/pca_functions.py` includes a manual PCA implementation with:
+
+- covariance matrix computation
+- eigendecomposition via `np.linalg.eigh`
+- explained variance ratio
+- `fit`, `transform`, and `fit_transform`
 
 ---
 
 ## Project Structure
 
-```
+```text
 final-submission/
 ├── data/
 ├── model_creation/
@@ -118,11 +142,11 @@ final-submission/
 ├── live_gesture_recognition.py
 ├── requirements.txt
 └── README.md
-
+````
 
 ---
 
-## Setup Instructions (M4)
+## Getting Started
 
 ### 1. Clone the repository
 
@@ -135,11 +159,17 @@ cd final-submission
 
 ```bash
 python -m venv venv
+```
 
-# Windows
+**Windows**
+
+```bash
 venv\Scripts\activate
+```
 
-# Linux / macOS
+**Linux / macOS**
+
+```bash
 source venv/bin/activate
 ```
 
@@ -151,9 +181,29 @@ pip install -r requirements.txt
 
 ---
 
-## Running the System
+## Run the System
 
-### Real-Time Gesture Prediction (M3)
+### Real-Time Gesture Recognition
+
+Run the recognizer directly:
+
+```bash
+python live_gesture_recognition.py
+```
+
+Useful options:
+
+```bash
+python live_gesture_recognition.py --slideshow
+python live_gesture_recognition.py --slideshow --flip
+python live_gesture_recognition.py --camera 1 --slideshow
+```
+
+Press **Q** or **ESC** to stop.
+
+---
+
+## Slideshow Integration
 
 Start the slideshow server first:
 
@@ -162,25 +212,23 @@ cd slideshow
 python slideshow_server.py
 ```
 
-Then open `http://127.0.0.1:8800` in a browser and start the gesture recogniser:
+Then open:
 
-```bash
-# Basic (no slideshow connection)
-python live_gesture_recognition.py
-
-# With slideshow integration
-python live_gesture_recognition.py --slideshow
-
-# Mirror the webcam image
-python live_gesture_recognition.py --slideshow --flip
-
-# Use a different camera index
-python live_gesture_recognition.py --camera 1 --slideshow
+```text
+http://127.0.0.1:8800
 ```
 
-Press **Q** or **ESC** to stop.
+Now run the gesture recognizer with slideshow support:
 
-### Performance Evaluation Mode (M6)
+```bash
+python live_gesture_recognition.py --slideshow
+```
+
+---
+
+## Performance Evaluation
+
+The scoring tool compares predicted gesture events with ground-truth annotations.
 
 ```bash
 python -m performance_score.calculator \
@@ -188,144 +236,13 @@ python -m performance_score.calculator \
     --ground_truth_csv <path/to/ground_truth.csv>
 ```
 
----
+### Scoring Logic
 
-## Machine Learning Approach
+* **+ bonus** for each correctly detected gesture
+* **− malus** for each false positive
+* final score normalized by the number of ground-truth gestures
 
-### Data Collection
-
-- Three performers: Arun Kumar, Aswathy Baiju, Nayana S Pawar
-- Gestures recorded using MediaPipe Pose (upper-body keypoints: 15 joints × 3 axes)
-- Annotated with ELAN and exported to CSV
-
-### Feature Engineering
-
-- Chest-centred normalisation (shoulder-midpoint origin, scaled by shoulder width)
-- Temporal velocity features (frame-to-frame differences)
-- Feature vector per window: 15 keypoints × 3 axes × 2 (position + velocity) = **90 features**
-- Sliding window of 18 frames at 30 FPS
-- Optional PCA dimensionality reduction (O2)
-
-### Neural Network (M1)
-
-- Fully-connected feedforward network
-- ReLU hidden layers, Softmax output
-- Cross-entropy loss with optional class weighting
-- Custom backpropagation — NumPy only, no external ML frameworks
-
-### Gradient Descent Variations (O12)
-
-Implemented from scratch in `adam_neural_net.py` (`NeuralNetwork` class):
-
-| Optimizer | Details |
-| --------- | ------- |
-| Vanilla SGD | Standard gradient descent |
-| Momentum SGD | Velocity-based gradient accumulation |
-| Adam | Adaptive moment estimation (β₁=0.9, β₂=0.999) |
-
-### Evaluation Metrics
-
-- Accuracy
-- Macro F1 Score
-- Confusion Matrix (counts + normalised)
-- Learning curves (loss, accuracy, F1)
-- Multi-model comparison plots (O1.1)
-- Performance Score (M6 formula: bonus per correct gesture, malus per false positive)
-
----
-
-## Detected Gestures
-
-| Gesture | Label | Requirement |
-| ------- | ----- | ----------- |
-| Swipe Right | `sr` | M2 (mandatory) |
-| Swipe Left | `sl` | M2 (mandatory) |
-| Rotate Clockwise | `r_cw` | M2 (mandatory) |
-| Swipe Up | `su` | O3 (optional) |
-| Rotate Counter-Clockwise | `r_ccw` | O5 (optional) |
-| Swipe Down | `sd` | O3 (optional) |
-| Idle | `idle` | — |
-
----
-
-## Optional Requirements — Details
-
-### O1 — ML Framework Package
-
-The project exposes a reusable Python package:
-
-- **`pipeline/gesture_pipeline.py`** — shared inference pipeline imported by both the live recogniser and the evaluation logger. Provides normalisation, feature extraction, FPS detection/subsampling, and a NumPy-only forward pass.
-- **`model_creation/`** — modular classes (`BaseNeuralNetwork`, `BaseNeuralNetworkPCA`, `AdamNeuralNetwork`, `NeuralNetwork`) and utility functions that can be imported independently.
-
-### O1.1 — Visualization Module
-
-`model_creation/helper_functions.py` provides:
-
-- `plot_metrics` — 3-panel learning curves (loss / accuracy / F1)
-- `plot_confusion_matrix` — heatmap with optional normalisation
-- `save_training_history` / `load_training_history` — persist training runs as `.npz`
-- `plot_model_comparison` — single-metric comparison across models
-- `plot_multi_model_summary` — 3-panel validation comparison for multiple models
-
-### O2 — Principal Component Analysis
-
-`model_creation/pca_functions.py` implements `ManualPCA`:
-
-- Covariance matrix via `np.cov`
-- Eigendecomposition with `np.linalg.eigh`
-- Explained variance ratio computation
-- `fit`, `transform`, `fit_transform` API
-- `BaseNeuralNetworkPCA` accepts PCA-reduced inputs
-
-### O3 — Additional Gesture: Swipe Up
-
-Swipe Up (`su`) is detected and mapped to the `swipe_up` slideshow command (moves to the previous vertical sub-slide in Reveal.js).
-
-### O5 — Additional Gesture: Rotate Counter-Clockwise
-
-Rotate Counter-Clockwise (`r_ccw`) is detected and mapped to `rotate_counter_clock`, which rotates the current slide image by −90° in the slideshow.
-
-### O9 — Attention Detection
-
-The live recogniser filters unintended commands through a multi-layer guard:
-
-1. **Presence detection** — if MediaPipe finds no person in frame, all inference is suppressed and a "No person detected" warning is shown.
-2. **Confidence gate** (`MIN_CONF = 0.82`) — softmax probabilities below 82% are classified as `idle`.
-3. **Majority-vote smoothing** — a 9-frame history window suppresses single-frame outliers.
-4. **Consecutive-frame debounce** (`MIN_CONSEC = 10`) — requires 10 consecutive agreeing windows before a gesture fires.
-5. **Cooldown guard** (`COOLDOWN_SEC = 2`) — minimum 2 seconds between successive events prevents repeated triggers.
-
-Together these layers ensure only deliberate, sustained gestures emit commands.
-
-### O10 — Snake-Game
-
-
-| Command | Effect |
-| ------- | ------ |
-| `move_left / right / up / down` | Control game |
-
-
-### O12 — Gradient Descent Variations
-
-The `NeuralNetwork` class in `model_creation/adam_neural_net.py` implements:
-
-- **Vanilla SGD** (`optimizer='sgd'`)
-- **Momentum SGD** (`optimizer='momentum'`, configurable momentum coefficient)
-- **Adam** (`optimizer='adam'`, β₁, β₂, ε all configurable)
-
-Additional features: L2 regularisation, inverted dropout, gradient clipping, mini-batch training, early stopping, and learning-rate scheduling.
-
----
-
-## Performance Evaluation (M6)
-
-The scorer in `performance_score/calculator.py` implements the official formula:
-
-- **+bonus** (default 10) for each correctly detected gesture (first event during a gesture interval)
-- **−malus** (default 0.2) for each false positive (event fired outside a gesture)
-- Final score normalised by the number of ground-truth gestures
-
-Run the visualisation separately to compare predicted events against ground truth frame-by-frame:
+To visualize predicted events against ground truth frame-by-frame:
 
 ```bash
 python -m performance_score.events_visualization \
@@ -335,19 +252,84 @@ python -m performance_score.events_visualization \
 
 ---
 
-## Teaser Video (M5)
+## Snake Game
 
-- Format: mp4
-- Codec: H264
-- Duration: 1 minute
-- Includes official HCI intro/outro template
+A gesture-controlled Snake game is included in:
+
+```text
+snake_game/snake_game.py
+```
+
+Run it with:
+
+```bash
+python snake_game/snake_game.py
+```
+
+### Controls
+
+* **Swipe Up** → move up
+* **Swipe Down** → move down
+* **Swipe Left** → move left
+* **Swipe Right** → move right
+
+The game uses the same real-time gesture recognition pipeline as the slideshow controller.
 
 ---
 
-## Compliance
+## Visualization Utilities
 
-- Python ≥ 3.6
-- Only whitelisted libraries used (`numpy`, `pandas`, `matplotlib`, `seaborn`, `opencv-python`, `mediapipe`, `pyyaml`, `tqdm`, `jupyter`, `fastapi`, `uvicorn`, `websockets`)
-- No forbidden ML frameworks (no TensorFlow, PyTorch, scikit-learn, etc.)
-- All ML logic (neural network, PCA, optimisers, metrics) implemented from scratch with NumPy
+The visualization tools in `model_creation/helper_functions.py` support:
 
+* training curves
+* confusion matrices
+* saved training histories
+* single-metric model comparison
+* multi-model validation summaries
+
+These utilities help compare experiments and interpret model behavior more effectively.
+
+---
+
+## Tech Stack
+
+* **Python**
+* **NumPy**
+* **Pandas**
+* **Matplotlib**
+* **OpenCV**
+* **MediaPipe**
+* **FastAPI**
+* **Uvicorn**
+* **WebSockets**
+* **Jupyter**
+
+---
+
+## Team
+
+Built by:
+
+* Arun Kumar
+* Aswathy Baiju
+* Nayana S Pawar
+
+---
+
+## Related Repositories
+
+* `../orga` — organization and submission overview
+* `../ml-package` — reusable custom ML framework package
+
+---
+
+## Notes
+
+* Python 3.6+
+* No external ML frameworks used
+* All core ML logic, including neural network training, PCA, optimization, and evaluation, is implemented from scratch using **NumPy**
+
+```
+
+I can also turn this into a slightly more “startup/product landing page” style version with badges, banner text, and cleaner section spacing.
+```
