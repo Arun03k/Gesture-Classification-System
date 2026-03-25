@@ -1,3 +1,5 @@
+Paste this into your `README.md`:
+
 ````markdown
 # Gesture-Controlled Slideshow System
 
@@ -9,45 +11,47 @@ The project combines **MediaPipe Pose**, a **NumPy-only neural network**, real-t
 
 ## Overview
 
-This system captures body keypoints from a webcam, transforms them into motion-aware feature vectors, and classifies gestures in real time. Detected gestures can then be used to:
+This system captures body keypoints from a webcam, transforms them into motion-aware feature vectors, and classifies gestures in real time.
 
-- navigate a **Reveal.js** slideshow
+Detected gestures can be used to:
+
+- control a **Reveal.js** slideshow
 - rotate slides through gesture commands
 - control a **Snake game**
 - evaluate prediction quality using recorded event logs and transcripts
 
 ---
 
-## Demo Video
+## Demo
 
-<!-- Update the path below if your teaser video is stored somewhere else -->
-<video src="presentation/teaser.mp4" controls width="100%"></video>
+Add your teaser video or preview asset inside the `presentation/` folder.
 
-If the video does not render inline in your platform, open it directly here:
-
+**Teaser video:**
 [▶ Watch the teaser video](presentation/teaser.mp4)
+
+> If you have a GIF or screenshot preview, you can also place it here for better GitHub rendering.
 
 ---
 
 ## Key Features
 
-- **Real-time gesture recognition** from live webcam input
-- **Pose-based motion capture** using MediaPipe Pose
-- **NumPy-only neural network** with custom forward and backpropagation
-- **Reveal.js slideshow control** via WebSockets
-- **Performance evaluation mode** with event scoring against ground truth
-- **PCA from scratch** using eigendecomposition
-- **Multiple optimizers** implemented from scratch: SGD, Momentum, Adam
-- **Visualization utilities** for training curves, confusion matrices, and model comparison
-- **Gesture-controlled Snake game**
-- **Attention and confidence filtering** to suppress accidental commands
+- Real-time gesture recognition from live webcam input
+- Pose-based motion capture using MediaPipe Pose
+- NumPy-only neural network with custom forward and backpropagation
+- Reveal.js slideshow control via WebSockets
+- Performance evaluation mode with event scoring against ground truth
+- PCA from scratch using eigendecomposition
+- Multiple optimizers implemented from scratch: SGD, Momentum, Adam
+- Visualization utilities for training curves, confusion matrices, and model comparison
+- Gesture-controlled Snake game
+- Attention and confidence filtering to suppress accidental commands
 
 ---
 
 ## Supported Gestures
 
 | Gesture | Label | Action |
-| ------- | ----- | ------ |
+|--------|-------|--------|
 | Swipe Right | `sr` | Next slide / move right |
 | Swipe Left | `sl` | Previous slide / move left |
 | Rotate Clockwise | `r_cw` | Rotate slide clockwise |
@@ -71,22 +75,28 @@ Each gesture window is transformed into a motion-aware feature vector using:
 - frame-to-frame velocity features
 - sliding temporal windows
 
-**Feature size per window:**  
-`15 keypoints × 3 axes × 2 (position + velocity) = 90 features`
+**Feature size per window:**
+
+```text
+15 keypoints × 3 axes × 2 (position + velocity) = 90 features
+````
 
 ### 3. Classification
+
 The feature vectors are passed into a fully connected neural network implemented entirely with **NumPy**.
 
 ### 4. Live Prediction
+
 Predictions are smoothed and filtered using:
 
-- no-person detection
-- confidence thresholding
-- majority voting
-- consecutive-frame debounce
-- cooldown timing
+* no-person detection
+* confidence thresholding
+* majority voting
+* consecutive-frame debounce
+* cooldown timing
 
 ### 5. Action Layer
+
 Recognized gestures are mapped to slideshow commands or game controls.
 
 ---
@@ -94,35 +104,38 @@ Recognized gestures are mapped to slideshow commands or game controls.
 ## Model Details
 
 ### Neural Network
-- Fully connected feedforward architecture
-- ReLU hidden activations
-- Softmax output layer
-- Cross-entropy loss
-- Custom backpropagation using NumPy only
+
+* Fully connected feedforward architecture
+* ReLU hidden activations
+* Softmax output layer
+* Cross-entropy loss
+* Custom backpropagation using NumPy only
 
 ### Optimization
+
 Implemented from scratch in `model_creation/adam_neural_net.py`:
 
-- **SGD**
-- **Momentum SGD**
-- **Adam**
+* **SGD**
+* **Momentum SGD**
+* **Adam**
 
 Additional training features include:
 
-- mini-batch training
-- dropout
-- L2 regularization
-- gradient clipping
-- early stopping
-- learning-rate scheduling
+* mini-batch training
+* dropout
+* L2 regularization
+* gradient clipping
+* early stopping
+* learning-rate scheduling
 
 ### PCA
+
 `model_creation/pca_functions.py` includes a manual PCA implementation with:
 
-- covariance matrix computation
-- eigendecomposition via `np.linalg.eigh`
-- explained variance ratio
-- `fit`, `transform`, and `fit_transform`
+* covariance matrix computation
+* eigendecomposition via `np.linalg.eigh`
+* explained variance ratio
+* `fit`, `transform`, and `fit_transform`
 
 ---
 
@@ -142,20 +155,20 @@ final-submission/
 ├── live_gesture_recognition.py
 ├── requirements.txt
 └── README.md
-````
+```
 
 ---
 
 ## Getting Started
 
-### 1. Clone the repository
+### 1. Clone the Repository
 
 ```bash
 git clone <repository-url>
 cd final-submission
 ```
 
-### 2. Create and activate a virtual environment
+### 2. Create and Activate a Virtual Environment
 
 ```bash
 python -m venv venv
@@ -173,7 +186,7 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -238,11 +251,11 @@ python -m performance_score.calculator \
 
 ### Scoring Logic
 
-* **+ bonus** for each correctly detected gesture
-* **− malus** for each false positive
-* final score normalized by the number of ground-truth gestures
+* **Bonus** for each correctly detected gesture
+* **Malus** for each false positive
+* Final score normalized by the number of ground-truth gestures
 
-To visualize predicted events against ground truth frame-by-frame:
+To visualize predicted events against ground truth frame by frame:
 
 ```bash
 python -m performance_score.events_visualization \
@@ -293,16 +306,16 @@ These utilities help compare experiments and interpret model behavior more effec
 
 ## Tech Stack
 
-* **Python**
-* **NumPy**
-* **Pandas**
-* **Matplotlib**
-* **OpenCV**
-* **MediaPipe**
-* **FastAPI**
-* **Uvicorn**
-* **WebSockets**
-* **Jupyter**
+* Python
+* NumPy
+* Pandas
+* Matplotlib
+* OpenCV
+* MediaPipe
+* FastAPI
+* Uvicorn
+* WebSockets
+* Jupyter
 
 ---
 
@@ -331,5 +344,5 @@ Built by:
 
 ```
 
-I can also turn this into a slightly more “startup/product landing page” style version with badges, banner text, and cleaner section spacing.
+I can also turn it into a cleaner GitHub-style version with badges, a preview image section, and a more polished landing-page layout.
 ```
