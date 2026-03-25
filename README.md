@@ -25,9 +25,6 @@ Add your teaser video or preview asset inside the `presentation/` folder.
 
 **Teaser video:**  
 [▶ Watch the teaser video](presentation/teaser.mp4)
-
-> GitHub usually does not render embedded HTML video reliably in README files, so a direct link, GIF, or screenshot works better.
-
 ---
 
 ## Key Features
