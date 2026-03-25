@@ -1,5 +1,3 @@
-Paste this into your `README.md`:
-
 ````markdown
 # Gesture-Controlled Slideshow System
 
