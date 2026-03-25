@@ -24,7 +24,7 @@ Detected gestures can be used to:
 Add your teaser video or preview asset inside the `presentation/` folder.
 
 **Teaser video:**  
-[▶ Watch the teaser video](presentation/teaser.mp4)
+[▶ Watch the teaser video](presentation/ml_project_team_31_teaser_video.mp4)
 ---
 
 ## Key Features
