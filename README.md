@@ -335,7 +335,3 @@ Built by:
 * Python 3.6+
 * No external ML frameworks used
 * All core ML logic, including neural network training, PCA, optimization, and evaluation, is implemented from scratch using **NumPy**
-
-
-I can also give you a more polished GitHub README with badges, centered title, preview GIF/image, and cleaner formatting.
-```
